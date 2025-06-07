@@ -922,6 +922,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
+name = "mfrc-remote-unit"
+version = "0.1.0"
+dependencies = [
+ "assign-resources",
+ "byte-slice-cast",
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "defmt 0.3.100",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-rp",
+ "embassy-sync",
+ "embassy-time",
+ "embassy-usb",
+ "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-bus",
+ "embedded-io-async",
+ "embedded-storage",
+ "fixed",
+ "fixed-macro",
+ "heapless 0.7.17",
+ "libm",
+ "log",
+ "mfrc522",
+ "panic-probe",
+ "pio",
+ "pio-proc",
+ "portable-atomic",
+ "postcard",
+ "postcard-schema",
+ "rand",
+ "rand_core",
+ "serde",
+ "static_cell",
+]
+
+[[package]]
 name = "mfrc522"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1066,20 +1105,6 @@ dependencies = [
  "arrayvec",
  "num_enum",
  "paste",
-]
-
-[[package]]
-name = "pio-9bit-uart-async"
-version = "0.1.0"
-source = "git+https://github.com/davidmpye/pio-9bit-uart-async#c21812af80622934fc0cb0db7bf56a773fec30fa"
-dependencies = [
- "embassy-rp",
- "embassy-sync",
- "embassy-time",
- "embedded-io-async",
- "fixed",
- "pio",
- "pio-proc",
 ]
 
 [[package]]
@@ -1413,46 +1438,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edeb89c73244414bb0568611690dd095b2358b3fda5bae65ad784806cca00157"
 dependencies = [
  "rgb",
-]
-
-[[package]]
-name = "snackbot-vmc"
-version = "0.1.0"
-dependencies = [
- "assign-resources",
- "byte-slice-cast",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "defmt 0.3.100",
- "defmt-rtt",
- "embassy-executor",
- "embassy-rp",
- "embassy-sync",
- "embassy-time",
- "embassy-usb",
- "embedded-hal 1.0.0",
- "embedded-hal-async",
- "embedded-hal-bus",
- "embedded-io-async",
- "embedded-storage",
- "fixed",
- "fixed-macro",
- "heapless 0.7.17",
- "libm",
- "log",
- "mfrc522",
- "panic-probe",
- "pio",
- "pio-9bit-uart-async",
- "pio-proc",
- "portable-atomic",
- "postcard",
- "postcard-schema",
- "rand",
- "rand_core",
- "serde",
- "static_cell",
 ]
 
 [[package]]
