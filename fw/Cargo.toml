@@ -49,6 +49,8 @@ embassy-net = { version = "0.7.0", features = ["defmt", "dhcpv4-hostname", "dns"
 reqwless = { version = "0.13.0", features = ["defmt"] }
 cyw43-pio = "0.4.0"
 embassy-rp = { version = "0.4.0", features = ["rp2040", "critical-section-impl", "defmt", "time-driver"] }
+md5 = { version = "0.7.0", default-features = false }
+format_no_std = "1.2.0"
 
 [profile.release]
 debug = 2
