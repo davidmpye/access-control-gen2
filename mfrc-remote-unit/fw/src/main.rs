@@ -19,7 +19,7 @@ use embassy_rp::bind_interrupts;
 
 use heapless::Vec;
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
-use postcard::to_vec;
+use postcard::to_vec_cobs;
 use serde::{Serialize, Deserialize};
 
 bind_interrupts!(struct Irqs {
@@ -115,7 +115,7 @@ async fn main(spawner: Spawner) -> ! {
                                     Message::CardReadError
                                 },
                             };
-                            let vec: Vec<u8,16> = to_vec(&message).unwrap();
+                            let vec: Vec<u8,16> = to_vec_cobs(&message).unwrap();
                             let _ = uart.write(&vec).await;
                             //Flash the card read LED to indicate success here.
                             card_read_led.set_high();
@@ -132,7 +132,7 @@ async fn main(spawner: Spawner) -> ! {
                 },
                 Err(_e) => {
                     error!("Device init failed, waiting to retry");
-                    let vec: Vec<u8,16> = to_vec(&Message::CardReaderFault).unwrap();
+                    let vec: Vec<u8,16> = to_vec_cobs(&Message::CardReaderFault).unwrap();
                     let _ = uart.write(&vec).await;
                     Timer::after_millis(500).await;
                 }
