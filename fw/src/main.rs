@@ -5,9 +5,7 @@
 #![no_main]
 #![allow(async_fn_in_trait)]
 
-
 use core::env;
-
 use cyw43::JoinOptions;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use defmt::*;
@@ -20,20 +18,25 @@ use embassy_net::{Config, StackResources};
 use embassy_rp::bind_interrupts;
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::gpio::{Level, Output};
-use embassy_rp::peripherals::{DMA_CH0, PIO0};
+use embassy_rp::peripherals::{UART0, WATCHDOG, DMA_CH0, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_time::{Duration, Timer};
 
 use reqwless::client::{HttpClient, TlsConfig, TlsVerify};
 use reqwless::request::Method;
-use serde::Deserialize;
 use static_cell::StaticCell;
+use crate::remote_cardreader::remote_cardreader_task;
+
 use {defmt_rtt as _, panic_probe as _};
+
+use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
 
 use rand::RngCore;
 
+mod remote_cardreader;
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
+    UART0_IRQ => UartInterruptHandler<UART0>;
 });
 
 const WIFI_NETWORK: &str = env!("WIFI_SSID");
@@ -55,17 +58,6 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let digest = md5::compute(b"1243");
-
-    let mut buf = [0x00u8; 32];
-    match format_no_std::show(&mut buf, format_args!("{:032x}", digest)) {
-        Ok(str) => {
-            info!("Got string {}", str);
-        }
-        Err(_e) => {
-            error!("Failed");
-        }
-    }
 
     let p = embassy_rp::init(Default::default());
     let mut rng = RoscRng;
@@ -118,7 +110,7 @@ async fn main(spawner: Spawner) {
     );
 
     unwrap!(spawner.spawn(net_task(runner)));
-
+/*
     loop {
         match control
             .join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes()))
@@ -147,8 +139,17 @@ async fn main(spawner: Spawner) {
     stack.wait_config_up().await;
     info!("Stack is up!");
 
-    // And now we can use it!
 
+ */
+    //Set up the UART and spawn the remote card reader task if that is what we are configured to use
+    let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
+    let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
+    spawner.must_spawn(remote_cardreader_task(uart));
+
+
+}
+    // And now we can use it!
+/* 
     loop {
         let mut rx_buffer = [0; 8192];
         let mut tls_read_buffer = [0; 16640];
@@ -198,4 +199,5 @@ async fn main(spawner: Spawner) {
 
         Timer::after(Duration::from_secs(5)).await;
     }
-}
+    */
+

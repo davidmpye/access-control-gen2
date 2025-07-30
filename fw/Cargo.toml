@@ -19,8 +19,6 @@ critical-section = "1.1"
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 byte-slice-cast = { version = "1.2.0", default-features = false }
 rand_core = "0.6.4"
-
-embedded-hal-1 = { package = "embedded-hal", version = "1.0" }
 embedded-hal-async = "1.0"
 embedded-hal-bus = { version = "0.1", features = ["async"] }
 embedded-io-async = { version = "0.6.1", features = ["defmt-03"] }
@@ -51,6 +49,8 @@ cyw43-pio = "0.4.0"
 embassy-rp = { version = "0.4.0", features = ["rp2040", "critical-section-impl", "defmt", "time-driver"] }
 md5 = { version = "0.7.0", default-features = false }
 format_no_std = "1.2.0"
+embedded-hal = "1.0.0"
+embedded-hal-nb = "1.0.0"
 
 [profile.release]
 debug = 2
