@@ -84,8 +84,8 @@ async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, 
             return Err(RemoteError::UartError);
         }
     }
-    //End of buffer hit.
-    error!("Rx buffer overrun");
+    //If we are here, we have hit the end of the buffer
+    error!("Rx buffer overflow");
     return Err(RemoteError::BufferOverrun);
 }
 
