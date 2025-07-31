@@ -118,8 +118,6 @@ async fn main(spawner: Spawner) {
     let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
     spawner.must_spawn(remote_cardreader_task(uart));
 
-
-
 /*
     loop {
         match control

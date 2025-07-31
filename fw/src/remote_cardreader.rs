@@ -21,7 +21,7 @@ enum Message {
 
 #[derive(Debug, Format)]
 pub enum RemoteError {
-    BufferOverrun,  //Message exceeded rx buffer length
+    RxBufferOverflow,  //Message exceeded rx buffer length
     UartError,      //Uart read error
     PostcardError,  //Unable to decode message using postcard - byte corruption?
 }
@@ -50,7 +50,8 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
                     error!("Reader fault");
                 },
                 Message::JustReset => {
-                    //NB this may happen if the card reader hangs, and the watchdog resets the MCU. as well as at power on
+                    //NB this may happen if the card reader hangs, 
+                    //and the watchdog resets the MCU, as well as at initial power on
                     info!("Reader just reset");
                 }
                 Message::KeepAlive => {
@@ -80,13 +81,14 @@ async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, 
             }
         }
         else {
+            //Unclear of the circumstances when uart.read returns an Error
             error!("Uart Rx error");
             return Err(RemoteError::UartError);
         }
     }
     //If we are here, we have hit the end of the buffer
     error!("Rx buffer overflow");
-    return Err(RemoteError::BufferOverrun);
+    return Err(RemoteError::RxBufferOverflow);
 }
 
 async fn handle_card_digest(digest: md5::Digest) {
