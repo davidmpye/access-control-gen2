@@ -1,6 +1,3 @@
-//! This example uses the RP Pico W board Wifi chip (cyw43).
-//! Connects to Wifi network and makes a web request to get the current time.
-
 #![no_std]
 #![no_main]
 #![allow(async_fn_in_trait)]
@@ -102,14 +99,27 @@ async fn main(spawner: Spawner) {
 
     // Init network stack
     static RESOURCES: StaticCell<StackResources<5>> = StaticCell::new();
-    let (stack, runner) = embassy_net::new(
+    let (_stack, runner) = embassy_net::new(
         net_device,
         config,
         RESOURCES.init(StackResources::new()),
         seed,
     );
-
+    //Spawn network task
     unwrap!(spawner.spawn(net_task(runner)));
+
+
+    //Set up channel to receive card hash 
+    //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
+    //Local task
+
+    //Remote task
+    let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
+    let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
+    spawner.must_spawn(remote_cardreader_task(uart));
+
+
+
 /*
     loop {
         match control
@@ -141,10 +151,8 @@ async fn main(spawner: Spawner) {
 
 
  */
-    //Set up the UART and spawn the remote card reader task if that is what we are configured to use
-    let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
-    let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
-    spawner.must_spawn(remote_cardreader_task(uart));
+
+
 
 
 }

@@ -29,12 +29,14 @@ bind_interrupts!(struct Irqs {
 //The card reader messages we send to the main unit
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 enum Message {
+    //RFID cards have different length UIDs
     SingleUid([u8;4]),
     DoubleUid([u8;7]),
     TripleUid([u8;10]),
     ReadError,
     ReaderFault,
-    ReaderOk
+    JustReset,
+    KeepAlive,
 }
 
 const WATCHDOG_TIMER_SECS:u64 = 2;
@@ -57,34 +59,40 @@ async fn main(spawner: Spawner) -> ! {
     let p = embassy_rp::init(Default::default());
 
     //Spawn the watchdog task first
-
     let heartbeat_led = Output::new(p.PIN_7, Level::Low);
     spawner.must_spawn(watchdog_task(p.WATCHDOG, heartbeat_led));
 
     //Set up pins
     let mut card_read_led = Output::new(p.PIN_6, Level::Low);
-
+    //SPI interface
     let miso = p.PIN_16;
     let ss =p.PIN_17;
     let sck = p.PIN_18;
     let mosi = p.PIN_19;
-    //Nice idea to use MFRC IRQ but not supported by driver
+    //Nice idea to use MFRC IRQ but not supported by driver library presently
     let _irq = Input::new(p.PIN_20, gpio::Pull::Up);
     let mut rst = Output::new(p.PIN_21, Level::High);
     let cs = Output::new(ss, Level::High);
 
+    //Set up the UART we use to speak over RS485 to the controller
     let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
+    let mut uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH0, p.DMA_CH1, UartConfig::default());
 
+    debug!("Sending JustReset to controller");
+    let vec: Vec<u8,16> = to_vec_cobs(&Message::JustReset).unwrap();
+    let _ = uart.write(&vec).await;
+
+    //Init SPI
+    debug!("Init SPI");
     let spi = Spi::new_blocking(p.SPI0, sck, mosi, miso, spi::Config::default());
     let mut spi = ExclusiveDevice::new(spi, cs, Delay);
 
-    let mut uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH0, p.DMA_CH1, UartConfig::default());
-
     let mut last_sent_ok_message_counter = 0x00u8;
 
+    debug!("Entering main loop");
     loop {   
         let interface = SpiInterface::new(&mut spi);      
-        //Reset, then initialise the MFRC522
+        //Reset, then try to initialise the MFRC522 readerS
         //Pull rst low for 250mS
         rst.set_low();
         Timer::after(Duration::from_millis(250)).await;
@@ -133,8 +141,8 @@ async fn main(spawner: Spawner) -> ! {
                             Timer::after_millis(100).await;
                             last_sent_ok_message_counter += 1;
                             if last_sent_ok_message_counter == 10 {
-                                //Send OK message to main unit so it knows we're still alive and reset counter
-                                let vec: Vec<u8,16> = to_vec_cobs(&Message::ReaderOk).unwrap();
+                                //Send OK message to main unit so it knows we're still alive
+                                let vec: Vec<u8,16> = to_vec_cobs(&Message::KeepAlive).unwrap();
                                 let _ = uart.write(&vec).await;
                                 last_sent_ok_message_counter = 0;
                             }
