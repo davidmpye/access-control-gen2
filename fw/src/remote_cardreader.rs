@@ -65,15 +65,14 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
 }
 
 async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, RemoteError> {
-    let mut buf = [0x00u8;32];
-    let mut count = 0x00usize;
-    for byte in buf.iter_mut() {
-        if let Ok(_) = uart.read(&mut[*byte]).await {
-            count += 1;
-            if *byte == 0x00u8 {
+    let mut buf = [0x00u8;16];
+
+    for index in 0..buf.len() {
+        if let Ok(_) = uart.read(&mut buf[index..index+1]).await {
+            if buf[index] == 0x00u8 {
                 //Message complete, cobs ensures 0x00 will never be part of message, just end marker
                 //Decode message using from_bytes_cobs from Postcard
-                let res: Result<Message, postcard::Error> = from_bytes_cobs(&mut buf[0..count]);
+                let res: Result<Message, postcard::Error> = from_bytes_cobs(&mut buf[0..index]);
                 match res {
                     Ok(message) => return Ok(message),
                     Err(_e) => return Err(RemoteError::PostcardError)
