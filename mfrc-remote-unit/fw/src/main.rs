@@ -26,14 +26,15 @@ bind_interrupts!(struct Irqs {
     UART0_IRQ => InterruptHandler<UART0>;
 });
 
-//The card reader messages we send
+//The card reader messages we send to the main unit
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 enum Message {
-    CardSingleUid([u8;4]),
-    CardDoubleUid([u8;7]),
-    CardTripleUid([u8;10]),
-    CardReadError,
-    CardReaderFault,
+    SingleUid([u8;4]),
+    DoubleUid([u8;7]),
+    TripleUid([u8;10]),
+    ReadError,
+    ReaderFault,
+    ReaderOk
 }
 
 const WATCHDOG_TIMER_SECS:u64 = 2;
@@ -79,6 +80,8 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH0, p.DMA_CH1, UartConfig::default());
 
+    let mut last_sent_ok_message_counter = 0x00u8;
+
     loop {   
         let interface = SpiInterface::new(&mut spi);      
         //Reset, then initialise the MFRC522
@@ -98,26 +101,27 @@ async fn main(spawner: Spawner) -> ! {
                                 Ok(ref _uid @ Uid::Single(ref inner)) => {
                                     debug!("Single UID card read");
                                     let bytes = inner.as_bytes();
-                                    Message::CardSingleUid([bytes[0], bytes[1], bytes[2], bytes[3]])
+                                    Message::SingleUid([bytes[0], bytes[1], bytes[2], bytes[3]])
                                 },
                                 Ok(ref _uid @ Uid::Double(ref inner)) => {
                                     debug!("Double UID card read");
                                     let bytes = inner.as_bytes();
-                                    Message::CardDoubleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6]])
+                                    Message::DoubleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6]])
                                 },
                                 Ok(ref _uid @ Uid::Triple(ref inner)) => {
                                     debug!("Triple UID card read");
                                     let bytes = inner.as_bytes();
-                                    Message::CardTripleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9]])
+                                    Message::TripleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9]])
                                 },
                                 Err(_e) => {
                                     error!("MFRC select error");
-                                    Message::CardReadError
+                                    Message::ReadError
                                 },
                             };
                             let vec: Vec<u8,16> = to_vec_cobs(&message).unwrap();
                             let _ = uart.write(&vec).await;
-                            //Flash the card read LED to indicate success here.
+                            debug!("Card UID message sent");
+                            //Flash the "card read" LED to indicate success here.
                             card_read_led.set_high();
                             Timer::after_millis(100).await;                                    
                             card_read_led.set_low();
@@ -127,12 +131,19 @@ async fn main(spawner: Spawner) -> ! {
                         else {
                             //WUPA failed, no card found. Wait 100mS in between read attempts
                             Timer::after_millis(100).await;
+                            last_sent_ok_message_counter += 1;
+                            if last_sent_ok_message_counter == 10 {
+                                //Send OK message to main unit so it knows we're still alive and reset counter
+                                let vec: Vec<u8,16> = to_vec_cobs(&Message::ReaderOk).unwrap();
+                                let _ = uart.write(&vec).await;
+                                last_sent_ok_message_counter = 0;
+                            }
                         }
                     } 
                 },
                 Err(_e) => {
                     error!("Device init failed, waiting to retry");
-                    let vec: Vec<u8,16> = to_vec_cobs(&Message::CardReaderFault).unwrap();
+                    let vec: Vec<u8,16> = to_vec_cobs(&Message::ReaderFault).unwrap();
                     let _ = uart.write(&vec).await;
                     Timer::after_millis(500).await;
                 }

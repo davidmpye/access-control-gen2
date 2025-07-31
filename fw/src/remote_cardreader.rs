@@ -9,17 +9,18 @@ use defmt::*;
 //The card reader messages we send
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 enum Message {
-    CardSingleUid([u8;4]),
-    CardDoubleUid([u8;7]),
-    CardTripleUid([u8;10]),
-    CardReadError,
-    CardReaderFault,
+    SingleUid([u8;4]),
+    DoubleUid([u8;7]),
+    TripleUid([u8;10]),
+    ReadError,
+    ReaderFault,
+    ReaderOk
 }
 
 #[embassy_executor::task]
 pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
     loop {
-        match read_card_cash(&mut uart).await {
+        match read_card_hash(&mut uart).await {
             Ok(hash) => {
                 let mut buf = [0x00u8; 32];
                 match format_no_std::show(&mut buf, format_args!("{:032x}", hash)) {
@@ -39,7 +40,7 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
     }
 }
 
-async fn read_card_cash<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<md5::Digest, ()> {
+async fn read_card_hash<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<md5::Digest, ()> {
     let mut buf = [0x00u8;17];
     let mut count = 0x00usize;
 
