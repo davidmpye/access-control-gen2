@@ -64,7 +64,7 @@ async fn main(spawner: Spawner) -> ! {
 
     //Set up pins
     let mut card_read_led = Output::new(p.PIN_6, Level::Low);
-    //SPI interface
+    //SPI pins for SPI0
     let miso = p.PIN_16;
     let ss =p.PIN_17;
     let sck = p.PIN_18;
@@ -78,6 +78,7 @@ async fn main(spawner: Spawner) -> ! {
     let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
     let mut uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH0, p.DMA_CH1, UartConfig::default());
 
+    //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-originated
     debug!("Sending JustReset to controller");
     let vec: Vec<u8,16> = to_vec_cobs(&Message::JustReset).unwrap();
     let _ = uart.write(&vec).await;
