@@ -7,7 +7,7 @@ use defmt::*;
 use {defmt_rtt as _, panic_probe as _};
 
 use embassy_executor::Spawner;
-use embassy_rp::{gpio, gpio::{Level, Input, Output}, spi::{self,Spi}};
+use embassy_rp::{gpio, gpio::{Level, Input, Output}, spi::{Config as SpiConfig,Spi}};
 use embassy_time::{Delay, Duration, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
 
@@ -64,35 +64,34 @@ async fn main(spawner: Spawner) -> ! {
 
     //Set up pins
     let mut card_read_led = Output::new(p.PIN_6, Level::Low);
-    //SPI pins for SPI0
-    let miso = p.PIN_16;
-    let ss =p.PIN_17;
-    let sck = p.PIN_18;
-    let mosi = p.PIN_19;
-    //Nice idea to use MFRC IRQ but not supported by driver library presently
-    let _irq = Input::new(p.PIN_20, gpio::Pull::Up);
-    let mut rst = Output::new(p.PIN_21, Level::High);
-    let cs = Output::new(ss, Level::High);
+    
 
     //Set up the UART we use to speak over RS485 to the controller
     let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
     let mut uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH0, p.DMA_CH1, UartConfig::default());
 
-    //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-originated
+    //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-origi
     debug!("Sending JustReset to controller");
     let vec: Vec<u8,16> = to_vec_cobs(&Message::JustReset).unwrap();
     let _ = uart.write(&vec).await;
 
-    //Init SPI
-    debug!("Init SPI");
-    let spi = Spi::new_blocking(p.SPI0, sck, mosi, miso, spi::Config::default());
-    let mut spi = ExclusiveDevice::new(spi, cs, Delay);
+    //Init SPI0 for talking to the card reader
+    debug!("Init SPI0 peripheral");
+    let (sck, mosi, miso, cs) = ( p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
+    let cs = Output::new(cs, Level::High); //CS into output
+
+    let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
+    let mut spi0 = ExclusiveDevice::new(spi0, cs, Delay);
+
+    //Nice idea to use MFRC IRQ but not supported by driver library presently
+    let _irq = Input::new(p.PIN_20, gpio::Pull::Up);
+    let mut rst = Output::new(p.PIN_21, Level::High);
 
     let mut last_sent_ok_message_counter = 0x00u8;
 
     debug!("Entering main loop");
     loop {   
-        let interface = SpiInterface::new(&mut spi);      
+        let interface = SpiInterface::new(&mut spi0);      
         //Reset, then try to initialise the MFRC522 readerS
         //Pull rst low for 250mS
         rst.set_low();

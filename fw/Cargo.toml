@@ -7,6 +7,10 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 categories = [ "embedded", "no-std" ]
 
+[features]
+#Communicate with the cardreader over RS485
+remote-cardreader = [] 
+
 [dependencies]
 defmt = "0.3"
 defmt-rtt = "0.4"
@@ -40,6 +44,7 @@ assign-resources = "0.4.1"
 libm = "0.2.11"
 heapless = "0.7.0"
 serde = { version = "1.0.219", default-features = false }
+#mfrc522 = { path = "../../mfrc522" }
 mfrc522 = "0.8.0"
 rp-pac = { version = "7.0.0", features = ["cortex-m-rt", "defmt", "rp2040", "rt"] }
 cyw43 = "0.3.0"

@@ -17,7 +17,11 @@ use embassy_rp::clocks::RoscRng;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals::{UART0, WATCHDOG, DMA_CH0, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Timer, Delay};
+use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
+use embassy_rp::spi::{Config as SpiConfig, Spi};
+
+
 
 use reqwless::client::{HttpClient, TlsConfig, TlsVerify};
 use reqwless::request::Method;
@@ -26,11 +30,12 @@ use crate::remote_cardreader::remote_cardreader_task;
 
 use {defmt_rtt as _, panic_probe as _};
 
-use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
 
+use embedded_hal_bus::spi::ExclusiveDevice;
 use rand::RngCore;
 
 mod remote_cardreader;
+
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
     UART0_IRQ => UartInterruptHandler<UART0>;
@@ -108,16 +113,34 @@ async fn main(spawner: Spawner) {
     //Spawn network task
     unwrap!(spawner.spawn(net_task(runner)));
 
+    //Set up SPI1 for the flash memory storage
+    let (sck, mosi, miso, cs) = (p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13);
+    let spi1 = Spi::new_blocking(p.SPI1, sck, mosi, miso, SpiConfig::default());
+    //NB - also need to set FLASH_WP and FLASH_HOLD - these probably don't need to be on GPIOs, and could just be 
+    //permanently set, but for now, they are on GPIOs.
+    let flash_wp = Output::new(p.PIN_14, Level::Low);  //WP is ACTIVE LOW - start with flash WP set
+    let flash_hold = Output::new(p.PIN_9, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
+    
+
+    //Configure the relay driver MOSFET Gate pin
+    let mosfet_pin = Output::new(p.PIN_15, Level::Low);
 
     //Set up channel to receive card hash 
     //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
-    //Local task
-
-    //Remote task
-    let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
-    let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
-    spawner.must_spawn(remote_cardreader_task(uart));
-
+    
+    if cfg!(not(feature = "remote-cardreader")) {   
+        //Local task - will poll SPI cardreader over local bus
+        let (sck, mosi, miso, cs) = ( p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
+        let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
+        let mut spi0 = ExclusiveDevice::new(spi0, cs, Delay);
+        //spawner.must_spawn(local_cardreader_task(spi));
+    }
+    else {  
+        //Remote task
+        let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
+        let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
+        spawner.must_spawn(remote_cardreader_task(uart));
+    }
 /*
     loop {
         match control
