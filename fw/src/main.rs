@@ -21,15 +21,14 @@ use embassy_time::{Duration, Timer, Delay};
 use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
 use embassy_rp::spi::{Config as SpiConfig, Spi};
 
-
-
 use reqwless::client::{HttpClient, TlsConfig, TlsVerify};
 use reqwless::request::Method;
 use static_cell::StaticCell;
+//For SPI flash
+use w25q32jv::W25q32jv;
 use crate::remote_cardreader::remote_cardreader_task;
 
 use {defmt_rtt as _, panic_probe as _};
-
 
 use embedded_hal_bus::spi::ExclusiveDevice;
 use rand::RngCore;
@@ -114,13 +113,30 @@ async fn main(spawner: Spawner) {
     unwrap!(spawner.spawn(net_task(runner)));
 
     //Set up SPI1 for the flash memory storage
-    let (sck, mosi, miso, cs) = (p.PIN_10, p.PIN_11, p.PIN_12, p.PIN_13);
+    let (sck, mosi, miso, cs) = (p.PIN_10, p.PIN_11, p.PIN_12, &p.PIN_13);
     let spi1 = Spi::new_blocking(p.SPI1, sck, mosi, miso, SpiConfig::default());
     //NB - also need to set FLASH_WP and FLASH_HOLD - these probably don't need to be on GPIOs, and could just be 
-    //permanently set, but for now, they are on GPIOs.
+    //permanently set because we don't use them
     let flash_wp = Output::new(p.PIN_14, Level::Low);  //WP is ACTIVE LOW - start with flash WP set
     let flash_hold = Output::new(p.PIN_9, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
-    
+    let flash_cs = Output::new(p.PIN_13, Level::High); //SPI flash CS pin
+
+    let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
+    let mut spi_flash = W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");
+    info!("SPI flash initialised - id {}", spi_flash.device_id().expect("Unable to read flash ID"));
+    const TEST_DATA: [u8; 4] = [0x36, 0x04, 0x81, 0xFE];
+    const TEST_OFFSET: u32 = 0x1000;
+
+    spi_flash.write_blocking(TEST_OFFSET, &TEST_DATA).unwrap();
+    let mut buf: [u8; 4] = [0; 4];
+    spi_flash.read(TEST_OFFSET, &mut buf).unwrap();
+
+    if (buf == TEST_DATA) {
+        info!("TEST PASSED");
+    }
+    else {
+        info!("TEST FAILED");
+    }
 
     //Configure the relay driver MOSFET Gate pin
     let mosfet_pin = Output::new(p.PIN_15, Level::Low);

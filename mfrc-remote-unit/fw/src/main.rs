@@ -83,7 +83,7 @@ async fn main(spawner: Spawner) -> ! {
     let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
     let mut spi0 = ExclusiveDevice::new(spi0, cs, Delay);
 
-    //Nice idea to use MFRC IRQ but not supported by driver library presently
+    //Nice idea to use MFRC IRQ pin but not supported by driver library presently
     let _irq = Input::new(p.PIN_20, gpio::Pull::Up);
     let mut rst = Output::new(p.PIN_21, Level::High);
 
