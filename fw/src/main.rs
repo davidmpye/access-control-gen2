@@ -6,11 +6,8 @@ use core::env;
 use cyw43::JoinOptions;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 use defmt::*;
-use embedded_io_async::Read;
 
 use embassy_executor::Spawner;
-use embassy_net::dns::DnsSocket;
-use embassy_net::tcp::client::{TcpClient, TcpClientState};
 use embassy_net::{Config, StackResources};
 use embassy_rp::bind_interrupts;
 use embassy_rp::clocks::RoscRng;
@@ -21,19 +18,24 @@ use embassy_time::{Duration, Timer, Delay};
 use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
 use embassy_rp::spi::{Config as SpiConfig, Spi};
 
-use reqwless::client::{HttpClient, TlsConfig, TlsVerify};
-use reqwless::request::Method;
 use static_cell::StaticCell;
+
 //For SPI flash
 use w25q32jv::W25q32jv;
-use crate::remote_cardreader::remote_cardreader_task;
+
+use remote_cardreader::remote_cardreader_task;
+use database_task::DatabaseRunner;
 
 use {defmt_rtt as _, panic_probe as _};
 
 use embedded_hal_bus::spi::ExclusiveDevice;
+
+use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
+
 use rand::RngCore;
 
 mod remote_cardreader;
+mod database_task;
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
@@ -44,6 +46,9 @@ const WIFI_NETWORK: &str = env!("WIFI_SSID");
 const WIFI_PASSWORD: &str = env!("WIFI_PW");
 
 const ENDPOINT_URL:&str = "https://www.bbc.co.uk:443";
+const DEVICE_NAME:&str = "backdoor";
+
+
 
 #[embassy_executor::task]
 async fn cyw43_task(
@@ -54,6 +59,13 @@ async fn cyw43_task(
 
 #[embassy_executor::task]
 async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'static>>) -> ! {
+    runner.run().await
+}
+
+#[embassy_executor::task]
+async fn database_task(mut runner: DatabaseRunner<W25q32jv<ExclusiveDevice<Spi<'static, 
+    embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking>, 
+    Output<'static>, embedded_hal_bus::spi::NoDelay>, Output<'static>, Output<'static>>>) -> ! {
     runner.run().await
 }
 
@@ -103,7 +115,7 @@ async fn main(spawner: Spawner) {
 
     // Init network stack
     static RESOURCES: StaticCell<StackResources<5>> = StaticCell::new();
-    let (_stack, runner) = embassy_net::new(
+    let (stack, runner) = embassy_net::new(
         net_device,
         config,
         RESOURCES.init(StackResources::new()),
@@ -114,37 +126,25 @@ async fn main(spawner: Spawner) {
 
     //Set up SPI1 for the flash memory storage
     let (sck, mosi, miso, cs) = (p.PIN_10, p.PIN_11, p.PIN_12, &p.PIN_13);
-    let spi1 = Spi::new_blocking(p.SPI1, sck, mosi, miso, SpiConfig::default());
+    let spi1: Spi<'_, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking> = Spi::new_blocking(p.SPI1, sck, mosi, miso, SpiConfig::default());
     //NB - also need to set FLASH_WP and FLASH_HOLD - these probably don't need to be on GPIOs, and could just be 
     //permanently set because we don't use them
     let flash_wp = Output::new(p.PIN_14, Level::Low);  //WP is ACTIVE LOW - start with flash WP set
     let flash_hold = Output::new(p.PIN_9, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
     let flash_cs = Output::new(p.PIN_13, Level::High); //SPI flash CS pin
-
     let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
     let mut spi_flash = W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");
-    info!("SPI flash initialised - id {}", spi_flash.device_id().expect("Unable to read flash ID"));
-    const TEST_DATA: [u8; 4] = [0x36, 0x04, 0x81, 0xFE];
-    const TEST_OFFSET: u32 = 0x1000;
-
-    spi_flash.write_blocking(TEST_OFFSET, &TEST_DATA).unwrap();
-    let mut buf: [u8; 4] = [0; 4];
-    spi_flash.read(TEST_OFFSET, &mut buf).unwrap();
-
-    if (buf == TEST_DATA) {
-        info!("TEST PASSED");
-    }
-    else {
-        info!("TEST FAILED");
-    }
+    info!("SPI flash (W25Q32) initialised - device id {}", spi_flash.device_id().expect("Unable to read flash ID"));
+ 
 
     //Configure the relay driver MOSFET Gate pin
-    let mosfet_pin = Output::new(p.PIN_15, Level::Low);
+    let _mosfet_pin = Output::new(p.PIN_15, Level::Low);
 
     //Set up channel to receive card hash 
     //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
     
     if cfg!(not(feature = "remote-cardreader")) {   
+        info!("Local cardreader mode selected");
         //Local task - will poll SPI cardreader over local bus
         let (sck, mosi, miso, cs) = ( p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
         let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
@@ -152,97 +152,28 @@ async fn main(spawner: Spawner) {
         //spawner.must_spawn(local_cardreader_task(spi));
     }
     else {  
-        //Remote task
+        //Remote task         
+        info!("Remote cardreader mode selected");
         let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
         let uart = Uart::new(uart, tx_pin, rx_pin, Irqs, p.DMA_CH2, p.DMA_CH3, UartConfig::default());
         spawner.must_spawn(remote_cardreader_task(uart));
     }
-/*
+
     loop {
         match control
             .join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes()))
             .await
         {
-            Ok(_) => break,
-            Err(err) => {
-                info!("join failed with status={}", err.status);
-            }
-        }
-    }
-
-    info!("waiting for DHCP...");
-    while !stack.is_config_up() {
-        Timer::after_millis(100).await;
-    }
-    info!("DHCP is now up!");
-
-    info!("waiting for link up...");
-    while !stack.is_link_up() {
-        Timer::after_millis(500).await;
-    }
-    info!("Link is up!");
-
-    info!("waiting for stack to be up...");
-    stack.wait_config_up().await;
-    info!("Stack is up!");
-
-
- */
-
-
-
-
-}
-    // And now we can use it!
-/* 
-    loop {
-        let mut rx_buffer = [0; 8192];
-        let mut tls_read_buffer = [0; 16640];
-        let mut tls_write_buffer = [0; 16640];
-
-        let client_state = TcpClientState::<1, 1024, 1024>::new();
-        let tcp_client = TcpClient::new(stack, &client_state);
-        let dns_client = DnsSocket::new(stack);
-        let tls_config = TlsConfig::new(
-            seed,
-            &mut tls_read_buffer,
-            &mut tls_write_buffer,
-            TlsVerify::None,
-        );
-
-        let mut http_client = HttpClient::new_with_tls(&tcp_client, &dns_client, tls_config);
-       
-        info!("connecting to {}", &ENDPOINT_URL);
-
-        let mut request = match http_client.request(Method::GET, &ENDPOINT_URL).await {
-            Ok(req) => req,
-            Err(e) => {
-                error!("Failed to make HTTP request: {:?}", e);
-                continue;
-            }
-        };
-
-        let response = match request.send(&mut rx_buffer).await {
-            Ok(resp) => resp,
-            Err(_e) => {
-                error!("Failed to send HTTP request");
-                continue;
-            }
-        };
-
-        //Read 100 bytes
-        let mut buf = [0x00u8; 100];
-
-        let mut reader = response.body().reader();
-
-        while let Ok(len) = reader.read(&mut buf).await {
-            if len == 0 {
+            Ok(_) => {
+                info!("WiFi network {} joined", WIFI_NETWORK);
                 break;
+            },
+            Err(err) => {
+                error!("Failed to join {}, status {}", WIFI_NETWORK, err.status);
             }
-            info!("Got {}", buf[0..len])
         }
-
-        Timer::after(Duration::from_secs(5)).await;
     }
-    */
+    //Spawn the database task
+    spawner.must_spawn(database_task(DatabaseRunner::new(spi_flash, 2 * 1024 * 1024, 0x00, stack)));
+}
 
