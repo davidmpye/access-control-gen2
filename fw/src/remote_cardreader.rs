@@ -1,5 +1,8 @@
-use embassy_rp::uart::{Uart, Config as UartConfig, InterruptHandler as UartInterruptHandler, Async};
+use embassy_rp::uart::{Uart, Async};
 use embassy_rp::peripherals::UART0;
+
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::signal::Signal;
 
 use postcard::from_bytes_cobs;
 use serde::{Serialize, Deserialize};
@@ -25,6 +28,13 @@ pub enum RemoteError {
     UartError,      //Uart read error
     PostcardError,  //Unable to decode message using postcard - byte corruption?
 }
+
+pub enum CardReaderEvent {
+    CardMD5([u8;32])
+}
+
+pub static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> =
+    Signal::new();
 
 #[embassy_executor::task]
 pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
@@ -96,7 +106,8 @@ async fn handle_card_digest(digest: md5::Digest) {
     match format_no_std::show(&mut buf, format_args!("{:032x}", digest)) {
         Ok(str) => {
             info!("Read card with MD5 hash {}", str);
-            //Send message to main task to confirm card read to 'do' something!
+            //Signal card reader event
+            CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(buf))
         },
         Err(_e) => {
             error!("Unable to format MD5 hash");

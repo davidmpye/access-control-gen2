@@ -281,7 +281,7 @@
 		(property ki_fp_filters "RaspberryPi?Pico?Common* RaspberryPi?Pico?SMD*")
 		(path "/ee14a5e1-c0a3-4e53-abfe-ca4af5c214d9")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 10 -25.61)
@@ -3405,7 +3405,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3432,7 +3432,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/2fe13f5f-2dbc-4fb8-9416-2d7a4822f1fc")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.6 -2.75)
@@ -3860,7 +3860,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -3887,7 +3887,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/14b9e8d8-eb84-4604-b6f6-6b053e62c2af")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.6 -2.75)
@@ -4315,7 +4315,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -4344,7 +4344,7 @@
 		(property ki_fp_filters "Jumper* TestPoint*2Pads* TestPoint*Bridge*")
 		(path "/a7b12669-40ee-485d-9fa4-c495040df24c")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(zone_connect 1)
 		(attr exclude_from_pos_files allow_soldermask_bridges)
 		(fp_rect
@@ -4487,7 +4487,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4514,7 +4514,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/bbdee108-d7d3-4743-980f-f4b43138f4fa")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.87 -2.92)
@@ -4826,7 +4826,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -4853,7 +4853,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/3bbbd100-d188-425b-92cc-998942b7cf6e")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.87 -2.92)
@@ -5164,7 +5164,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5204,7 +5204,7 @@
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/97938a28-d22e-4b83-9c2d-9572880540c9")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 1.6 -1.135)
@@ -5398,7 +5398,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5425,7 +5425,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/71b08968-043a-49a4-992c-9ebd527fc146")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 1.355)
@@ -5597,7 +5597,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5637,7 +5637,7 @@
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/b66c44d8-d362-4ab1-8873-59e10a566fc4")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.46 1.135)
@@ -5831,7 +5831,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -5858,7 +5858,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/58720bc0-637c-47b4-b3ba-eccd58ea90f0")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 1.355)
@@ -6030,7 +6030,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 270)
 			(layer "F.Fab")
 			(hide yes)
@@ -6057,7 +6057,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/66923de9-43c8-4bc1-b384-43a8abe6059a")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.87 3.82)
@@ -6424,14 +6424,14 @@
 			)
 		)
 	)
-	(footprint "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder"
+	(footprint "Diode_SMD:D_SMA-SMB_Universal_Handsoldering"
 		(layer "F.Cu")
 		(uuid "7b13fcbf-df8c-470c-98e3-2d2c3502ae35")
-		(at 65 77.75)
-		(descr "Diode SMD 1206 (3216 Metric), square (rectangular) end terminal, IPC-7351 nominal, (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
-		(tags "diode handsolder")
+		(at 61.69 77.26)
+		(descr "Diode, Universal, SMA (DO-214AC) or SMB (DO-214AA), Handsoldering,")
+		(tags "Diode Universal SMA (DO-214AC) SMB (DO-214AA) Handsoldering ")
 		(property "Reference" "D1"
-			(at 0 -1.83 0)
+			(at 0 -3 0)
 			(layer "F.SilkS")
 			(uuid "65ddff7a-a897-4548-af95-1ead01632325")
 			(effects
@@ -6442,7 +6442,7 @@
 			)
 		)
 		(property "Value" "D"
-			(at 0 1.83 0)
+			(at 0 3.1 0)
 			(layer "F.Fab")
 			(uuid "53b7d2f4-2424-4aeb-a89e-be1ba78ff7c8")
 			(effects
@@ -6452,8 +6452,9 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "1e519fef-633e-484f-9e01-16d7337bddf5")
@@ -6466,6 +6467,7 @@
 		)
 		(property "Description" "Diode"
 			(at 0 0 0)
+			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "a8528e6a-6b5e-4e62-a524-c7fc51e3bf13")
@@ -6481,7 +6483,7 @@
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "ec70896c-80cb-48c6-bead-9b061afd7dd4")
+			(uuid "e955fadc-7180-49ca-94b3-979374cff740")
 			(effects
 				(font
 					(size 1 1)
@@ -6494,7 +6496,7 @@
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
-			(uuid "c036db79-db60-41d5-8602-0a3c35171b1c")
+			(uuid "424bc007-086e-4acc-851f-b76a31c07d49")
 			(effects
 				(font
 					(size 1 1)
@@ -6505,161 +6507,251 @@
 		(property ki_fp_filters "TO-???* *_Diode_* *SingleDiode* D_*")
 		(path "/689354f9-1e69-4cdc-a989-a9c781c9807e")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
-			(start -2.46 -1.135)
-			(end -2.46 1.135)
+			(start -4.96 -2.15)
+			(end -4.96 2.15)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
 			(layer "F.SilkS")
-			(uuid "f12cf48d-8bc1-4e35-a344-e531827afd34")
+			(uuid "d038c967-69fd-415e-ab4b-fdd1670e9595")
 		)
 		(fp_line
-			(start -2.46 1.135)
-			(end 1.6 1.135)
+			(start -4.96 -2.15)
+			(end 2.7 -2.15)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
 			(layer "F.SilkS")
-			(uuid "a33c48ce-ab81-4414-b24d-6f173911579b")
+			(uuid "e018f0b0-948b-444a-aed4-bec4e5695cbc")
 		)
 		(fp_line
-			(start 1.6 -1.135)
-			(end -2.46 -1.135)
+			(start -4.96 2.15)
+			(end 2.7 2.15)
 			(stroke
 				(width 0.12)
 				(type solid)
 			)
 			(layer "F.SilkS")
-			(uuid "8fc61f28-4e6e-49d3-bc19-7a1c974e5c2e")
+			(uuid "fd034257-3574-4123-8809-9d87e9ce59fd")
 		)
 		(fp_line
-			(start -2.45 -1.13)
-			(end 2.45 -1.13)
+			(start -4.95 -2.25)
+			(end 4.95 -2.25)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(layer "F.CrtYd")
-			(uuid "656b9965-166f-4c7e-85a3-e7287acea44c")
+			(uuid "ac996a4f-639d-40b9-a671-ff2e594bf274")
 		)
 		(fp_line
-			(start -2.45 1.13)
-			(end -2.45 -1.13)
+			(start -4.95 2.25)
+			(end -4.95 -2.25)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(layer "F.CrtYd")
-			(uuid "edb775fd-bd25-4096-b475-4b32070fef64")
+			(uuid "c31544dc-ed8c-4c31-9ddb-a1b932b89d0b")
 		)
 		(fp_line
-			(start 2.45 -1.13)
-			(end 2.45 1.13)
+			(start 4.95 -2.25)
+			(end 4.95 2.25)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(layer "F.CrtYd")
-			(uuid "6c638eed-f8d1-4533-87fe-52d8deda54ac")
+			(uuid "9e951e9e-4685-4465-a331-03ba717aef16")
 		)
 		(fp_line
-			(start 2.45 1.13)
-			(end -2.45 1.13)
+			(start 4.95 2.25)
+			(end -4.95 2.25)
 			(stroke
 				(width 0.05)
 				(type solid)
 			)
 			(layer "F.CrtYd")
-			(uuid "f310c18b-00a1-4465-9a22-b670ce7d7e3d")
+			(uuid "76506d96-9ebd-481b-90c2-de551d095c2c")
 		)
 		(fp_line
-			(start -1.6 -0.4)
-			(end -1.6 0.8)
+			(start -2.3 1.5)
+			(end -2.3 -1.5)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(layer "F.Fab")
-			(uuid "f38e49b7-81d4-424a-8240-bdbf905dc241")
+			(uuid "2852c15f-79bc-40ba-9c37-cd150a7b5111")
 		)
 		(fp_line
-			(start -1.6 0.8)
-			(end 1.6 0.8)
+			(start -2.3 2)
+			(end -2.3 -2)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(layer "F.Fab")
-			(uuid "a3fe2a9b-ff0f-43e2-bab5-f4e9be423596")
+			(uuid "5d4970a7-073a-4169-86d5-e6d629183bd4")
 		)
 		(fp_line
-			(start -1.2 -0.8)
-			(end -1.6 -0.4)
+			(start -0.64944 -0.79908)
+			(end -0.64944 0.80112)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(layer "F.Fab")
-			(uuid "870229fb-2af2-4738-a810-59df2e4928fe")
+			(uuid "6e4d6a4d-3e2b-4fa3-9dc4-fa48eb591e95")
 		)
 		(fp_line
-			(start 1.6 -0.8)
-			(end -1.2 -0.8)
+			(start -0.64944 0.00102)
+			(end -1.55114 0.00102)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(layer "F.Fab")
-			(uuid "3b2e9c99-aef5-46fc-b463-c0cc069e6a39")
+			(uuid "cd769b67-732e-47b6-8085-73b68a83a067")
 		)
 		(fp_line
-			(start 1.6 0.8)
-			(end 1.6 -0.8)
+			(start -0.64944 0.00102)
+			(end 0.50118 -0.79908)
 			(stroke
 				(width 0.1)
 				(type solid)
 			)
 			(layer "F.Fab")
-			(uuid "446177a3-ff86-4303-8cb8-6d8b63c3bb19")
+			(uuid "a16016f0-d163-476b-b4e3-0ee5f253077f")
+		)
+		(fp_line
+			(start -0.64944 0.00102)
+			(end 0.50118 0.75032)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "34dc9e54-82f6-4c12-b30f-bf5585ed5c56")
+		)
+		(fp_line
+			(start 0.50118 0.00102)
+			(end 1.4994 0.00102)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "29233ba1-0885-423c-a6e4-e8670af2d761")
+		)
+		(fp_line
+			(start 0.50118 0.75032)
+			(end 0.50118 -0.79908)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "1792c042-3ecf-4220-942d-6f3e3d1e286b")
+		)
+		(fp_line
+			(start 2.3 -2)
+			(end -2.3 -2)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "ffb93dc2-97c3-42f1-ab7c-e7204a434a61")
+		)
+		(fp_line
+			(start 2.3 -2)
+			(end 2.3 2)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "8cd404f0-76dc-4e9f-af51-6916a5513695")
+		)
+		(fp_line
+			(start 2.3 -1.5)
+			(end -2.3 -1.5)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "408a5d6a-9679-4ef5-8e1e-dd9df68a003a")
+		)
+		(fp_line
+			(start 2.3 -1.5)
+			(end 2.3 1.5)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "95d1880c-c0cf-43a5-b657-40821c51b771")
+		)
+		(fp_line
+			(start 2.3 1.5)
+			(end -2.3 1.5)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "f8892634-d108-4120-ac6c-4db305e5509c")
+		)
+		(fp_line
+			(start 2.3 2)
+			(end -2.3 2)
+			(stroke
+				(width 0.1)
+				(type solid)
+			)
+			(layer "F.Fab")
+			(uuid "8a5960cf-abec-4569-8ff6-3fb0bf067b8f")
 		)
 		(fp_text user "${REFERENCE}"
-			(at 0 0 0)
+			(at 0 -3 0)
 			(layer "F.Fab")
 			(uuid "abc773f4-8be6-4ad9-aa62-48bc284d2f73")
 			(effects
 				(font
-					(size 0.8 0.8)
-					(thickness 0.12)
+					(size 1 1)
+					(thickness 0.15)
 				)
 			)
 		)
-		(pad "1" smd roundrect
-			(at -1.4875 0)
-			(size 1.425 1.75)
+		(pad "1" smd trapezoid
+			(at -2.9 0)
+			(size 3.6 1.7)
+			(rect_delta 0.6 0)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(roundrect_rratio 0.175439)
 			(net 41 "RELAY+")
 			(pinfunction "K")
 			(pintype "passive")
 			(uuid "92732c98-141f-4bf6-8a56-83b2323efe20")
 		)
-		(pad "2" smd roundrect
-			(at 1.4875 0)
-			(size 1.425 1.75)
+		(pad "2" smd trapezoid
+			(at 2.9 0 180)
+			(size 3.6 1.7)
+			(rect_delta 0.6 0)
 			(layers "F.Cu" "F.Mask" "F.Paste")
-			(roundrect_rratio 0.175439)
 			(net 36 "RELAY-")
 			(pinfunction "A")
 			(pintype "passive")
 			(uuid "cd0fce4e-cf04-4464-8e0a-05aead9c938f")
 		)
 		(embedded_fonts no)
-		(model "${KICAD9_3DMODEL_DIR}/Diode_SMD.3dshapes/D_1206_3216Metric.step"
+		(model "${KICAD9_3DMODEL_DIR}/Diode_SMD.3dshapes/D_SMB.step"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -6699,7 +6791,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -6726,7 +6818,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/fa061ead-3f04-4cba-b2a1-88c12fdc4a24")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 1.355)
@@ -6996,7 +7088,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7036,7 +7128,7 @@
 		(property ki_fp_filters "LED* LED_SMD:* LED_THT:*")
 		(path "/f6703559-bd97-4235-93c0-13995b86310b")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.46 -1.135)
@@ -7230,7 +7322,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -7259,7 +7351,7 @@
 		(property ki_fp_filters "SolderJumper*Open*")
 		(path "/86d69248-dbeb-46e2-b030-4c48d688e6a9")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(zone_connect 1)
 		(attr exclude_from_pos_files exclude_from_bom allow_soldermask_bridges)
 		(fp_rect
@@ -7538,7 +7630,7 @@
 				)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -7565,7 +7657,7 @@
 		(property ki_fp_filters "Connector*:*_1x??_*")
 		(path "/705f57ee-8d1d-4ec8-8af4-2c36628315cc")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr through_hole)
 		(fp_line
 			(start -1.38 -1.38)
@@ -8081,7 +8173,7 @@
 		)
 		(path "/d826e082-ae04-4c58-9b1c-6cc8a43c403d")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_rect
 			(start -21.5 -7.5)
@@ -8341,7 +8433,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 270)
 			(layer "B.Fab")
 			(hide yes)
@@ -8370,7 +8462,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/2d9eb376-a857-4530-84a2-e09f079baef4")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 -1.355)
@@ -8545,7 +8637,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -8575,7 +8667,7 @@
 		)
 		(path "/f390d3c5-918c-451b-9b98-f03f56160823")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -1.85 3.41)
@@ -8843,7 +8935,7 @@
 		(property ki_fp_filters "*SOIC*5.3x5.3mm*P1.27mm*")
 		(path "/b39c2fe5-064c-4812-b965-3f36b47a3715")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -2.76 2.76)
@@ -9271,7 +9363,7 @@
 		(property ki_fp_filters "SOT?23*")
 		(path "/c943cc54-f535-41b9-8b2d-ef1ec32ba842")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0 1.56)
@@ -9580,7 +9672,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -9609,7 +9701,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/b76fae60-2cca-4530-b9d0-f3ef96de76d1")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 -1.355)
@@ -9815,7 +9907,7 @@
 		(property ki_fp_filters "microSD*")
 		(path "/81679a66-ae62-4cd7-9ab7-340de7f4074c")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 6.11 -5.82)
@@ -10279,7 +10371,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -10308,7 +10400,7 @@
 		(property ki_fp_filters "R_*")
 		(path "/a8b33eb7-ea8a-4083-b24f-0969b581d618")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.723737 1.355)
@@ -10483,7 +10575,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -10514,7 +10606,7 @@
 		(property ki_fp_filters "Jumper* TestPoint*2Pads* TestPoint*Bridge*")
 		(path "/24544631-79f7-47d0-85a4-48aeebb3b317")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(zone_connect 1)
 		(attr exclude_from_pos_files allow_soldermask_bridges)
 		(fp_rect
@@ -10687,7 +10779,7 @@
 		(property ki_fp_filters "SOT?23*")
 		(path "/4126c44f-ffdb-4196-94b5-b33802d9f5e0")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start 0 -1.56)
@@ -10996,7 +11088,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Datasheet" ""
+		(property "Datasheet" "~"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -11025,7 +11117,7 @@
 		(property ki_fp_filters "C_*")
 		(path "/0359e9ca-8f65-4181-83b2-e821725c9758")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_line
 			(start -0.711252 0.91)
@@ -11230,7 +11322,7 @@
 		)
 		(path "/cacc65f3-0c42-4118-b24d-7771257c59cc")
 		(sheetname "/")
-		(sheetfile "door-remote.kicad_sch")
+		(sheetfile "controller.kicad_sch")
 		(attr smd)
 		(fp_rect
 			(start -12 7)
@@ -14282,20 +14374,20 @@
 		(uuid "fd07f7be-3bcd-4db2-b541-bfe9e66faaa3")
 	)
 	(segment
-		(start 66.5 77.7625)
-		(end 66.4875 77.75)
+		(start 66.5 79.17)
+		(end 64.59 77.26)
 		(width 0.8)
 		(layer "F.Cu")
 		(net 36)
-		(uuid "9a4d52a0-b902-471d-93ab-82db06deb564")
+		(uuid "0cbc6f88-7a32-4049-a107-399c1c04f4df")
 	)
 	(segment
 		(start 66.5 83.25)
-		(end 66.5 77.7625)
+		(end 66.5 79.17)
 		(width 0.8)
 		(layer "F.Cu")
 		(net 36)
-		(uuid "e30470ab-3c28-419b-a487-afdf48cbdce7")
+		(uuid "a184a71e-0bed-43f2-b340-212ab66c6d4f")
 	)
 	(segment
 		(start 77.35 78.15)
@@ -14506,12 +14598,20 @@
 		(uuid "c4fa2214-05c0-4e7c-b324-24ac48ae85c0")
 	)
 	(segment
-		(start 63 78.2625)
-		(end 63.5125 77.75)
+		(start 63 81.47)
+		(end 58.79 77.26)
 		(width 0.8)
 		(layer "F.Cu")
 		(net 41)
-		(uuid "7859ed8b-3fae-494e-b8d9-c7b23644b0aa")
+		(uuid "1c5bcf35-1e94-4eb3-aee4-84559f40e7cb")
+	)
+	(segment
+		(start 63 83.25)
+		(end 63 81.47)
+		(width 0.8)
+		(layer "F.Cu")
+		(net 41)
+		(uuid "78447411-9a24-4410-b6bd-2bc8b94bd097")
 	)
 	(segment
 		(start 77.7 82.3)
@@ -14528,14 +14628,6 @@
 		(layer "F.Cu")
 		(net 41)
 		(uuid "9a2c0b11-0b03-47b7-acf3-8b9a4f5421f1")
-	)
-	(segment
-		(start 63 83.25)
-		(end 63 78.2625)
-		(width 0.8)
-		(layer "F.Cu")
-		(net 41)
-		(uuid "b8c79314-3a6a-47de-8f24-1230eea942ba")
 	)
 	(segment
 		(start 74.5 85.5)

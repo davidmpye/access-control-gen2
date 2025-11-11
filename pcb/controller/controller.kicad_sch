@@ -7721,7 +7721,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R"
+		(property "Value" "91R"
 			(at 40.64 99.0599 0)
 			(effects
 				(font
@@ -8008,7 +8008,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Diode_SMD:D_1206_3216Metric_Pad1.42x1.75mm_HandSolder"
+		(property "Footprint" "Diode_SMD:D_SMA-SMB_Universal_Handsoldering"
 			(at 93.98 34.29 0)
 			(effects
 				(font
@@ -8241,7 +8241,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R"
+		(property "Value" "91R"
 			(at 58.42 99.0599 0)
 			(effects
 				(font
@@ -11289,7 +11289,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R"
+		(property "Value" "91R"
 			(at 21.59 99.0599 0)
 			(effects
 				(font
