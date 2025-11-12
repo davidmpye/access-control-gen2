@@ -90,8 +90,7 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                 }
             }
         }
-        //Discard any pending message to avoid double-
-        info!("Signal reset");
+        //Discard any pending message to avoid double-activation
         CARDREADER_EVENT_SIGNAL.reset();
     }
 }

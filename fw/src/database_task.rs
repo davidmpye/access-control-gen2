@@ -36,6 +36,7 @@ struct DbFlash<T: NorFlash + ReadNorFlash> {
 }
 
 pub enum UpdateError {
+    WifiNotConnected,
     ConnectionError,                                    //Reqwless unable to connect
     Timeout,
     RemoteServerError(reqwless::response::StatusCode),  //Http error from remote server (not 200!)
@@ -176,35 +177,19 @@ impl <T>DatabaseRunner<T> where T: NorFlash+ ReadNorFlash {
             info!("Local db count is {}", count -1); //-1 to account for the __DB_VERSION__ key
         }
 
-        info!("Reqwless HTTP client init");
-        let mut tls_read_buffer = [0; 16640];
-        let mut tls_write_buffer = [0; 16640];
-        let mut rng = RoscRng;
-        let seed = rng.next_u64();
-
-        let client_state = TcpClientState::<1, 1024, 1024>::new();
-        let tcp_client = TcpClient::new(self.stack, &client_state);
-        let dns_client = DnsSocket::new(self.stack);
-        let tls_config = TlsConfig::new(
-            seed,
-            &mut tls_read_buffer,
-            &mut tls_write_buffer,
-            TlsVerify::None,
-        );
-        let mut client= HttpClient::new_with_tls(&tcp_client, &dns_client, tls_config);
-
         let mut last_sync_attempt_time = Instant::MIN;
 
+        
         loop {
             //Sync on startup and after specified delay
             if last_sync_attempt_time == Instant::MIN || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency {
                 last_sync_attempt_time = Instant::now();
-                info!("Attempting database sync");
-                if sync_database(&db, &mut client).await.is_ok() { 
+                info!("Database sync due - attempting");
+                if sync_database(&db, self.stack).await.is_ok() { 
                     info!("Sync OK");
                 } 
                 else {
-                    info!("Sync failed");
+                    error!("Database sync failed");
                 }
             }
             info!("Now awaiting database command signal");
@@ -252,7 +237,33 @@ async fn db_lookup<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRaw
     }
 }
 
-async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRawMutex>, http_client: &mut HttpClient<'_, TcpClient<'_, 1>, DnsSocket<'_>>) -> Result<(),UpdateError> {
+async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRawMutex>, stack: Stack<'static>,
+) -> Result<(),UpdateError> {
+    //Check if network is up, abort if not
+    if !stack.is_config_up() {
+        error!("Unable to sync - no wifi connection");
+        return Err(UpdateError::WifiNotConnected);
+    }
+
+    //Build a fresh http client for each database update attempt
+    info!("Reqwless HTTP client init");
+    let mut tls_read_buffer = [0; 8096];
+    let mut tls_write_buffer = [0; 8096];
+    let mut rng = RoscRng;
+    let seed = rng.next_u64();
+
+    let client_state = TcpClientState::<2, 1024, 1024>::new();
+    let tcp_client = TcpClient::new(stack, &client_state);
+    let dns_client = DnsSocket::new(stack);
+    let tls_config = TlsConfig::new(
+        seed,
+        &mut tls_read_buffer,
+        &mut tls_write_buffer,
+        TlsVerify::None,
+    );
+    let mut http_client= HttpClient::new_with_tls(&tcp_client, &dns_client, tls_config);
+
+    let mut last_sync_attempt_time = Instant::MIN;
     //Check current database version
     let rtx = db.read_transaction().await;
     let mut buf = [0u8; 32];
@@ -261,7 +272,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
     info!("Current database version: {:a}", current_db_version);
     drop(rtx);
 
-    match get_remote_db_version(http_client).await {
+    match get_remote_db_version(&mut http_client).await {
         Ok(remote_db_version) => {
             info!("Remote DB version is {}", remote_db_version);
             if remote_db_version == current_db_version {
@@ -280,15 +291,21 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
 
                 //Make connection
                 let mut rx_buffer = [0; 2048];
-                info!("Making request object");
-                let mut request = http_client.request(Method::GET, &url).await?;
-
-                info!("Making connection with 5 sec timeout");
-                //Perform connection, with 5 sec timeout
-                let timeout = Duration::from_secs(5); //Maybe be more generous
-                let response = match embassy_time::with_timeout(timeout,request.send(&mut rx_buffer)).await {
+                info!("Creating HTTP request");
+                
+                let mut request = match embassy_time::with_timeout(CONFIG.http_timeout, http_client.request(Method::GET, &url)).await {
                     Ok(e) => {
-                        info!("Response OK");
+                        e?
+                    }
+                    Err(_) => {
+                        error!("Timeout creating http request");
+                        return Err(UpdateError::Timeout);
+                    }
+                };
+
+                info!("Connecting");
+                let response = match embassy_time::with_timeout(CONFIG.http_timeout,request.send(&mut rx_buffer)).await {
+                    Ok(e) => {
                         e?
                     },
                     Err(_) => {
@@ -365,18 +382,26 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
     }
 }
 
-async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 1>, DnsSocket<'_>>) -> Result<[u8;24], UpdateError> {
-
+async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 2>, DnsSocket<'_>>) -> Result<[u8;24], UpdateError> {
     let mut url_buf = [0x00u8;128];
     let url = format_no_std::show(&mut url_buf, format_args!("{}/{}/{}", CONFIG.url_endpoint, CONFIG.device_name, CONFIG.db_version_prefix)).expect("Unable to build DB update URL");
     info!("Connecting to {}", &url);
     //Make connection
     let mut rx_buffer = [0; 2048];
-    let timeout = Duration::from_secs(5); //Maybe be more generous
 
-    let mut request = http_client.request(Method::GET, &url).await?;
+    info!("Creating HTTP request");
+    let mut request = match embassy_time::with_timeout(CONFIG.http_timeout, http_client.request(Method::GET, &url)).await {
+        Ok(e) => {
+            e?
+        }
+        Err(_) => {
+            error!("Timeout creating http request");
+            return Err(UpdateError::Timeout);
+        }
+    };
 
-    let response = match embassy_time::with_timeout(timeout,request.send(&mut rx_buffer)).await {
+    info!("Connecting");
+    let response = match embassy_time::with_timeout(CONFIG.http_timeout,request.send(&mut rx_buffer)).await {
         Ok(e) => {
             e?
         },
@@ -387,7 +412,7 @@ async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 1>
     };
 
     if ! StatusCode::is_successful(&response.status) {
-        error!("Http connection error: {}", &response.status);
+        error!("Http server error: {}", &response.status);
         return Err(UpdateError::RemoteServerError(response.status));
     }
         

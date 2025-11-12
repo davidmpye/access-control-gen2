@@ -103,8 +103,6 @@ async fn main(spawner: Spawner) {
     let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
     let mut spi_flash = W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");    info!("SPI flash (W25Q32) initialised - device id {}", spi_flash.device_id().expect("Unable to read flash ID"));
 
-
-
     //Wifi setup 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
@@ -116,12 +114,9 @@ async fn main(spawner: Spawner) {
         .set_power_management(cyw43::PowerManagementMode::PowerSave)
         .await;
 
-    let config = WifiConfig::dhcpv4(Default::default());
-
-    // Generate random seed
-    let seed = rng.next_u64();
-
     // Init network stack
+    let config = WifiConfig::dhcpv4(Default::default());
+    let seed = rng.next_u64();
     static RESOURCES: StaticCell<StackResources<5>> = StaticCell::new();
     let (stack, runner) = embassy_net::new(
         net_device,

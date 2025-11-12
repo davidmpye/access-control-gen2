@@ -15,7 +15,6 @@ pub async fn watchdog_task(watchdog: WATCHDOG, mut heartbeat_pin: Output<'static
     dog.start(Duration::from_millis(WATCHDOG_TIMER_MS));
     info!("Watchdog enabled");
     loop {        
-        debug!("Fed watchdog");
         dog.feed();
         Timer::after(Duration::from_millis(WATCHDOG_FEED_TIMER_MS)).await;
         heartbeat_pin.set_high();
