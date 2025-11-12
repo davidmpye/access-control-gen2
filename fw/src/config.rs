@@ -12,6 +12,7 @@ pub (crate) struct Config<'a> {
     pub url_endpoint: &'a str,
     pub db_prefix: &'a str,
     pub db_version_prefix: &'a str,
+    pub http_timeout: Duration,
     pub latch_mode: LatchMode,
     pub db_sync_frequency: Duration,
 }
@@ -23,6 +24,7 @@ pub(crate) static CONFIG: Config = Config {
     url_endpoint: "http://YOUR_URL_ENDPOINT",
     db_prefix: "db",
     db_version_prefix: "dbVersion",
+    http_timeout: Duration::from_secs(10),
     latch_mode : LatchMode::TimedMs(5000), 
     db_sync_frequency: Duration::from_secs(5*60),
 };
