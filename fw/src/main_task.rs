@@ -70,12 +70,12 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                             },
                         }
                     },
-                    LatchMode::TimedMs(time) => {
+                    LatchMode::Timed(time) => {
                         if card_valid {
-                            info!("Card valid, activating for {} mS", time);
+                            info!("Card valid, activating for {} seconds", time.as_secs());
                             relay_pin.set_high();
                             allowed_led.set_high();
-                            Timer::after_millis(time).await;
+                            Timer::after(time).await;
                             relay_pin.set_low();
                             allowed_led.set_low();
                             info!("Deactivated");

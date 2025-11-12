@@ -2,7 +2,7 @@ use embassy_time::Duration;
 
 pub (crate) enum LatchMode {
     Latching,       //Device/controller will remain enabled until another card is scanned to disable it
-    TimedMs(u64),   //Device controller will remain enabled for <value> mS then disable
+    Timed(Duration),   //Device controller will remain enabled for <time> then disable again 
 }
 
 pub (crate) struct Config<'a> {
@@ -25,7 +25,7 @@ pub(crate) static CONFIG: Config = Config {
     db_prefix: "db",
     db_version_prefix: "dbVersion",
     http_timeout: Duration::from_secs(10),
-    latch_mode : LatchMode::TimedMs(5000), 
+    latch_mode : LatchMode::Timed(Duration::from_secs(5)), 
     db_sync_frequency: Duration::from_secs(5*60),
 };
 
