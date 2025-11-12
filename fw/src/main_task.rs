@@ -12,6 +12,8 @@ use crate::database_task::{DatabaseTaskCommand, DatabaseTaskResponse};
 
 use crate::{CONFIG,config::LatchMode};
 
+use crate::{LOG_EVENT_SIGNAL, LogEvent};
+
 enum LatchState {
     Enabled,
     Disabled,
@@ -52,12 +54,15 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                                     relay_pin.set_high();
                                     allowed_led.set_high();
                                     latch_state = LatchState::Enabled;
+                                    LOG_EVENT_SIGNAL.signal(LogEvent::ACTIVATED(hash));
                                 }
                                 else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
                                     Timer::after_secs(2).await;
                                     denied_led.set_low();
+                                    LOG_EVENT_SIGNAL.signal(LogEvent::LOGINFAIL(hash));
+
                                 }
                                 //Todo - if we are using a remote cardreader, could we send a message back to it allowing it to illuminate a status LED too?
                             },
@@ -67,6 +72,7 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                                 relay_pin.set_low();
                                 allowed_led.set_low();
                                 latch_state = LatchState::Disabled;
+                                LOG_EVENT_SIGNAL.signal(LogEvent::DEACTIVATED(hash));
                             },
                         }
                     },
@@ -79,12 +85,15 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                             relay_pin.set_low();
                             allowed_led.set_low();
                             info!("Deactivated");
+                            LOG_EVENT_SIGNAL.signal(LogEvent::ACTIVATED(hash));
                         }
                         else {
                             info!("Card invalid, access denied");
                             denied_led.set_high();
                             Timer::after_secs(2).await;
                             denied_led.set_low();
+                            LOG_EVENT_SIGNAL.signal(LogEvent::LOGINFAIL(hash));
+
                         }
                     },
                 }

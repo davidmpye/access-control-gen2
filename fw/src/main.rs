@@ -27,15 +27,18 @@ use static_cell::StaticCell;
 use embedded_hal_bus::spi::ExclusiveDevice;
 use rand::RngCore;
 
-use remote_cardreader::remote_cardreader_task;
-use database_task::DatabaseRunner;
 mod remote_cardreader;
 mod database_task;
 mod main_task;
 mod watchdog;
-use watchdog::watchdog_task;
-use main_task::main_task;
+mod log_task;
 
+use remote_cardreader::remote_cardreader_task;
+use database_task::DatabaseRunner;
+use main_task::main_task;
+use watchdog::watchdog_task;
+
+use log_task::{LOG_EVENT_SIGNAL, LogEvent, LogTaskRunner};
 mod config;
 use config::CONFIG;
 
@@ -60,6 +63,11 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 async fn database_task(runner: DatabaseRunner<W25q32jv<ExclusiveDevice<Spi<'static, 
     embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking>, 
     Output<'static>, embedded_hal_bus::spi::NoDelay>, Output<'static>, Output<'static>>>) -> ! {
+    runner.run().await
+}
+
+#[embassy_executor::task]
+async fn log_task(runner: LogTaskRunner) -> ! {
     runner.run().await
 }
 
@@ -154,6 +162,10 @@ async fn main(spawner: Spawner) {
 
     //Spawn the database task
     spawner.must_spawn(database_task(DatabaseRunner::new(spi_flash, 2 * 1024 * 1024, 0x00, stack)));
+
+    //Spawn the log task
+
+    spawner.must_spawn(log_task(LogTaskRunner::new(stack)));
 
     //Spawn the watchdog task
     spawner.must_spawn(watchdog_task(

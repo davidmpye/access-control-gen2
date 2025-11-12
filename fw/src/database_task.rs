@@ -143,12 +143,6 @@ impl <T>DatabaseRunner<T> where T: NorFlash+ ReadNorFlash {
 
             let current_db_version = match key_read {
                 Ok(val) =>  {
-
-                    //To force update:
-                    //let mut wtx = db.write_transaction().await;
-                    //wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
-                   // wtx.commit().await.unwrap();
-                    //&[0x00]
                     val
                 },
                 Err(_e) => {
@@ -179,17 +173,17 @@ impl <T>DatabaseRunner<T> where T: NorFlash+ ReadNorFlash {
 
         let mut last_sync_attempt_time = Instant::MIN;
 
-        
         loop {
-            //Sync on startup and after specified delay
-            if last_sync_attempt_time == Instant::MIN || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency {
+            //Sync 60 seconds after startup (to let wifi come up) and at specified intervals
+            if  last_sync_attempt_time == Instant::MIN  && Instant::now() > Instant::MIN + Duration::from_secs(60)  
+                ||  Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency {
                 last_sync_attempt_time = Instant::now();
                 info!("Database sync due - attempting");
                 if sync_database(&db, self.stack).await.is_ok() { 
                     info!("Sync OK");
                 } 
                 else {
-                    error!("Database sync failed");
+                    error!("Database sync failed"); 
                 }
             }
             info!("Now awaiting database command signal");
@@ -228,11 +222,11 @@ async fn db_lookup<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRaw
     let mut buf = [0u8; 32];
 
     if let Some(key) =  rtx.read(&hash, &mut buf).await.map(|n| &buf[..n]).ok() {
-        debug!("Key found in database");
+        debug!("Key {:?} found in database", hash);
         Some(())
     }
     else {
-        debug!("Key NOT found in database");
+        debug!("Key {:?} NOT found in database",hash);
         None
     }
 }
@@ -263,7 +257,6 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
     );
     let mut http_client= HttpClient::new_with_tls(&tcp_client, &dns_client, tls_config);
 
-    let mut last_sync_attempt_time = Instant::MIN;
     //Check current database version
     let rtx = db.read_transaction().await;
     let mut buf = [0u8; 32];
@@ -281,13 +274,12 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
             else {
                 info!("Commencing database update from {:a} to {:a}", current_db_version, remote_db_version);
                 //Erase existing database
-                info!("Erasing database");
+                debug!("Erasing database");
                 db.format().await.expect("Failed to erase database");
-                info!("Preparing to download new database");
-
+                debug!("Preparing to download new database");
                 let mut url_buf = [0x00u8;128];
                 let url = format_no_std::show(&mut url_buf, format_args!("{}/{}/{}", CONFIG.url_endpoint, CONFIG.device_name, CONFIG.db_prefix)).expect("Unable to build DB update URL");
-                info!("Connecting to {}", &url);
+                debug!("Connecting to {}", &url);
 
                 //Make connection
                 let mut rx_buffer = [0; 2048];
@@ -303,13 +295,13 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
                     }
                 };
 
-                info!("Connecting");
+                debug!("Connecting");
                 let response = match embassy_time::with_timeout(CONFIG.http_timeout,request.send(&mut rx_buffer)).await {
                     Ok(e) => {
                         e?
                     },
                     Err(_) => {
-                        info!("Timeout");
+                        error!("Database update failed (timed out)");
                         return Err(UpdateError::Timeout);
                     }
                 };
@@ -319,7 +311,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
                     return Err(UpdateError::RemoteServerError(response.status));
                 }
                     
-                info!("Connection successful");
+                debug!("Connected to server, receiving hashes");
                 //We will process the hashes in 32 hash chunks, so we can sort and store them
                 //Each hash is 32 bytes long with a trailing space as a separator.
 
@@ -331,16 +323,17 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
                 while let Ok(len) = reader.read(&mut buf[buf_offset..]).await {
                     if len == 0 {
                         //EOF
-                        info!("Hit EOF");
+                        debug!("Hit EOF");
                         break;
                     }
-                    info!("Read {} bytes", len);
+                    debug!("Read {} bytes", len);
                     let mut store: Vec<[u8;32], 32> = Vec::new();
 
                     let mut hashes = buf[..len + buf_offset].chunks_exact(33);
                     while let Some(hash) = hashes.next() {
                         //Convert hash into correct length type
                         let hash:[u8;32] = hash[0..32].try_into().unwrap();
+                        debug!("Storing hash {} into vec", core::str::from_utf8(&hash).unwrap());
                         store.push(hash).expect("Heapless vec hash store error");
                     }
                    
@@ -349,7 +342,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
 
                     let mut wtx: ekv::WriteTransaction<'_, DbFlash<T>, NoopRawMutex> = db.write_transaction().await;
                     for i in store {
-                        info!("Writing key: {:a}",i);
+                        debug!("Writing key: {:a}",i);
                         wtx.write(&i,&[0x00]).await.expect("Key write failure");
                     }
                     wtx.commit().await.expect("Transaction commit failed");
@@ -358,7 +351,9 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
                     if excess_byte_count != 0  {
                         //odd bytes, need to copy these to the start of the buffer, and set offset appropriately
                         //so the next read arrives at the right place
-                        let (left,right) = buf.split_at_mut(len - excess_byte_count);
+                        let (left,right) = buf.split_at_mut((len + buf_offset) - excess_byte_count);
+                        debug!("Len is {}, excess byte count is {}", len, excess_byte_count);
+                        debug!("Left is \n{}, right is \n{}", core::str::from_utf8(left).unwrap(), core::str::from_utf8(right).unwrap());
                         left[0..excess_byte_count].copy_from_slice(&right[..excess_byte_count]);                        
                         buf_offset = excess_byte_count;
                     }
@@ -373,6 +368,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
             wtx.write(b"__DB_VERSION__", &remote_db_version).await.unwrap();
             wtx.commit().await.unwrap();
             //Fixme  -remaining bytes
+            info!("Database update completed successfully");
             Ok(())
         }
         Err(e) =>  {
@@ -385,11 +381,11 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
 async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 2>, DnsSocket<'_>>) -> Result<[u8;24], UpdateError> {
     let mut url_buf = [0x00u8;128];
     let url = format_no_std::show(&mut url_buf, format_args!("{}/{}/{}", CONFIG.url_endpoint, CONFIG.device_name, CONFIG.db_version_prefix)).expect("Unable to build DB update URL");
-    info!("Connecting to {}", &url);
+    debug!("Obtaining remote database version from {}", url);
     //Make connection
     let mut rx_buffer = [0; 2048];
 
-    info!("Creating HTTP request");
+    debug!("Creating HTTP request");
     let mut request = match embassy_time::with_timeout(CONFIG.http_timeout, http_client.request(Method::GET, &url)).await {
         Ok(e) => {
             e?
@@ -400,13 +396,13 @@ async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 2>
         }
     };
 
-    info!("Connecting");
+    debug!("Connecting");
     let response = match embassy_time::with_timeout(CONFIG.http_timeout,request.send(&mut rx_buffer)).await {
         Ok(e) => {
             e?
         },
         Err(_) => {
-            info!("Timeout");
+            error!("Timeout connecting to server {}", url);
             return Err(UpdateError::Timeout);
         }
     };
@@ -416,7 +412,7 @@ async fn get_remote_db_version(http_client: &mut HttpClient<'_, TcpClient<'_, 2>
         return Err(UpdateError::RemoteServerError(response.status));
     }
         
-    info!("Connection successful");
+    debug!("Connection successful");
     //Read 100 bytes
     let mut buf = [0x00u8; 100];
     let mut reader = response.body().reader();
