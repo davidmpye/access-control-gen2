@@ -29,8 +29,8 @@ pub(crate) enum LogEvent {
 }
 
 //The queue can hold 32 events awaiting logging
-pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, 32> =
-    Channel::<ThreadModeRawMutex, LogEvent, 32>::new();
+pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, 16> =
+    Channel::<ThreadModeRawMutex, LogEvent, 16>::new();
 
 pub struct LogTaskRunner {
     stack: Stack<'static>,
@@ -52,31 +52,33 @@ impl LogTaskRunner {
 
             //Await an event from the queue
             let event = LOG_EVENT_QUEUE.receive().await;
-            match self.log_event(&event)
+            match self
+                .log_event(&event)
                 .with_timeout(CONFIG.http_timeout)
-                .await {
-                    Ok(result) => {
-                        match result {
-                            Ok(_) => {
-                                info!("Log event recorded successfully")
-                            }
-                            Err(_) => {
-                                warn!("Log event failed, will be requeued");
-                                //Attempt to requeue
-                                if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
-                                    error!("Unable to requeue - this event will be lost")
-                                }
+                .await
+            {
+                Ok(result) => {
+                    match result {
+                        Ok(_) => {
+                            info!("Log event recorded successfully")
+                        }
+                        Err(_) => {
+                            warn!("Log event failed, will be requeued");
+                            //Attempt to requeue
+                            if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
+                                error!("Unable to requeue - this event will be lost")
                             }
                         }
-                    },
-                    Err(_timeout)=> {
-                        warn!("Log event timeout, will be requeued");
-                        //Attempt to requeue
-                        if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
-                            error!("Unable to requeue - this event will be lost")
-                        }
-                    },
+                    }
                 }
+                Err(_timeout) => {
+                    warn!("Log event timeout, will be requeued");
+                    //Attempt to requeue
+                    if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
+                        error!("Unable to requeue - this event will be lost")
+                    }
+                }
+            }
         }
     }
 
@@ -87,7 +89,7 @@ impl LogTaskRunner {
                 //Convert hash to an ascii str representation
                 hash
             }
-            _ => b"N/A                             ",  //32 bytes long too...
+            _ => b"N/A                             ", //32 bytes long too...
         };
         let hash = core::str::from_utf8(hash).unwrap_or(" Non-ascii bytes in hash");
 
@@ -157,5 +159,4 @@ impl LogTaskRunner {
         };
         x
     }
-
 }
