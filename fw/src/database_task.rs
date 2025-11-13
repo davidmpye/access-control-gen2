@@ -216,12 +216,11 @@ impl <T>DatabaseRunner<T> where T: NorFlash+ ReadNorFlash {
     }
 }
 
-
 async fn db_lookup<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRawMutex>, hash: [u8;32]) -> Option<()> {
     let rtx = db.read_transaction().await;
     let mut buf = [0u8; 32];
 
-    if let Some(key) =  rtx.read(&hash, &mut buf).await.map(|n| &buf[..n]).ok() {
+    if let Some(_key) =  rtx.read(&hash, &mut buf).await.map(|n| &buf[..n]).ok() {
         debug!("Key {:?} found in database", hash);
         Some(())
     }

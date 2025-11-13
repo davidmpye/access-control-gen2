@@ -12,7 +12,7 @@ use crate::database_task::{DatabaseTaskCommand, DatabaseTaskResponse};
 
 use crate::{CONFIG,config::LatchMode};
 
-use crate::{LOG_EVENT_SIGNAL, LogEvent};
+use crate::{LOG_EVENT_QUEUE, LogEvent};
 
 enum LatchState {
     Enabled,
@@ -54,15 +54,14 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                                     relay_pin.set_high();
                                     allowed_led.set_high();
                                     latch_state = LatchState::Enabled;
-                                    LOG_EVENT_SIGNAL.signal(LogEvent::ACTIVATED(hash));
+                                    send_log_message(LogEvent::ACTIVATED(hash));
                                 }
                                 else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
                                     Timer::after_secs(2).await;
                                     denied_led.set_low();
-                                    LOG_EVENT_SIGNAL.signal(LogEvent::LOGINFAIL(hash));
-
+                                    send_log_message(LogEvent::LOGINFAIL(hash));
                                 }
                                 //Todo - if we are using a remote cardreader, could we send a message back to it allowing it to illuminate a status LED too?
                             },
@@ -72,7 +71,7 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                                 relay_pin.set_low();
                                 allowed_led.set_low();
                                 latch_state = LatchState::Disabled;
-                                LOG_EVENT_SIGNAL.signal(LogEvent::DEACTIVATED(hash));
+                                send_log_message(LogEvent::DEACTIVATED(hash));
                             },
                         }
                     },
@@ -85,15 +84,14 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
                             relay_pin.set_low();
                             allowed_led.set_low();
                             info!("Deactivated");
-                            LOG_EVENT_SIGNAL.signal(LogEvent::ACTIVATED(hash));
+                            send_log_message(LogEvent::ACTIVATED(hash));
                         }
                         else {
                             info!("Card invalid, access denied");
                             denied_led.set_high();
                             Timer::after_secs(2).await;
                             denied_led.set_low();
-                            LOG_EVENT_SIGNAL.signal(LogEvent::LOGINFAIL(hash));
-
+                            send_log_message(LogEvent::LOGINFAIL(hash));
                         }
                     },
                 }
@@ -104,3 +102,14 @@ pub async fn main_task( mut relay_pin: Output<'static>, mut allowed_led: Output<
     }
 }
 
+fn send_log_message(e: LogEvent) {
+    match LOG_EVENT_QUEUE.try_send(e) {
+        Ok(_) => {
+            debug!("Log event added to logger queue");
+        },
+        Err(_) => {
+            error!("Log event queue full, event will be lost");
+        },
+    }
+
+}

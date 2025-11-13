@@ -3,10 +3,11 @@ use embassy_net::{Stack,dns::DnsSocket, tcp::client::{TcpClient, TcpClientState}
 use embassy_rp::clocks::RoscRng;
 
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::signal::Signal;
+use embassy_sync::channel::Channel;
 
 use defmt::*;
 
+use embassy_time::Timer;
 use rand::RngCore;
 
 use reqwless::{request::RequestBuilder, response::StatusCode};
@@ -22,9 +23,8 @@ pub(crate) enum LogEvent {
     ERROR,
 }
 
-pub static LOG_EVENT_SIGNAL: Signal<ThreadModeRawMutex, LogEvent> =
-    Signal::new();
-
+//The queue can hold 32 events awaiting logging
+pub static LOG_EVENT_QUEUE: Channel::<ThreadModeRawMutex, LogEvent, 32> = Channel::<ThreadModeRawMutex, LogEvent, 32>::new();
 
 pub struct LogTaskRunner {
     stack: Stack<'static>,
@@ -37,18 +37,29 @@ impl LogTaskRunner {
 
     pub async fn run(self) -> ! {
         loop {
-            let event = LOG_EVENT_SIGNAL.wait().await;
+            //If we have no wifi connection, try again in a bit.
+            while !self.stack.is_config_up() {
+                error!("Log task waiting - no wifi connection");
+                //Wait 60 seconds and try again.
+                Timer::after_secs(60).await;
+            }
 
-            //Obtain the two strings we nede to send to the log
+            //Block here waiting for an event to log
+            let event = LOG_EVENT_QUEUE.receive().await;
+
+            //Convert hash to ascii string representation
             let hash = match event {
                 LogEvent::ACTIVATED(hash)  | LogEvent::DEACTIVATED(hash) | LogEvent::LOGINFAIL(hash) => {
+                    //Convert hash to an ascii str representation
                     hash
                 }
                 _ => {
-                    *b"NO HASH                         "
+                    *b"N/A                             "
                 }
             };
+            let hash = core::str::from_utf8(&hash).unwrap_or(" Non-ascii bytes in hash");
 
+            //Get printable name for event, as expected by the Makerspace logging API
             let event = match event {
                 LogEvent::ACTIVATED(_) => {
                     "Activated"
@@ -64,16 +75,8 @@ impl LogTaskRunner {
                 }
             };
 
-            let hash_as_str = core::str::from_utf8(&hash).unwrap_or(" Invalid bytes");
-
-            //Build an http client and send the log event
-              //Check if network is up, abort if not
-            if !self.stack.is_config_up() {
-                error!("Unable to sync - no wifi connection");
-            }
-
             //Build a fresh http client for each database update attempt
-            info!("Reqwless HTTP client init");
+            debug!("Reqwless HTTP client init");
             let mut tls_read_buffer = [0; 8096];
             let mut tls_write_buffer = [0; 8096];
             let mut rng = RoscRng;
@@ -95,7 +98,7 @@ impl LogTaskRunner {
             debug!("Connecting to {}", &url);
 
             let mut json_buf = [0x00;256];
-            let json = format_no_std::show(&mut json_buf, format_args!("{{ \"type\": \"{}\", \"hash\": \"{}\"}}", event, hash_as_str)).expect("Unable to build JSON log event");
+            let json = format_no_std::show(&mut json_buf, format_args!("{{ \"type\": \"{}\", \"hash\": \"{}\"}}", event, hash)).expect("Unable to build JSON log event");
 
             debug!("Json string: {}", json);
             

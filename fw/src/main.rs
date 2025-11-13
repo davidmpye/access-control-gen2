@@ -38,7 +38,7 @@ use database_task::DatabaseRunner;
 use main_task::main_task;
 use watchdog::watchdog_task;
 
-use log_task::{LOG_EVENT_SIGNAL, LogEvent, LogTaskRunner};
+use log_task::{LOG_EVENT_QUEUE, LogEvent, LogTaskRunner};
 mod config;
 use config::CONFIG;
 
