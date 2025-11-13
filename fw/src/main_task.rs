@@ -14,7 +14,7 @@ use crate::{config::LatchMode, CONFIG};
 use crate::{LogEvent, LOG_EVENT_QUEUE};
 
 enum LatchState {
-    Enabled,
+    Enabled([u8;32]), //We store the card hash of the person who is signed into the controller
     Disabled,
 }
 
@@ -24,12 +24,11 @@ pub async fn main_task(
     mut allowed_led: Output<'static>,
     mut denied_led: Output<'static>,
 ) -> ! {
-    //The task needs ownership of Red LED, green LED, MOSFET_PIN
-
+    //The task needs ownership of Red LED, Green LED, MOSFET gate pin
+    
     //Receives message of new RFID read via signal, passes to database task.
     //Receives message from database task - card allowed, card denied
     //Activates appropriate LED +- FET
-    //Sends message to telemetry task- to do
     let mut latch_state = LatchState::Disabled;
 
     loop {
@@ -52,7 +51,7 @@ pub async fn main_task(
                                     info!("Card valid, access granted");
                                     relay_pin.set_high();
                                     allowed_led.set_high();
-                                    latch_state = LatchState::Enabled;
+                                    latch_state = LatchState::Enabled(hash);
                                     queue_log_message(LogEvent::ACTIVATED(hash));
                                 } else {
                                     info!("Card invalid, access denied");
@@ -63,7 +62,7 @@ pub async fn main_task(
                                 }
                                 //Todo - if we are using a remote cardreader, could we send a message back to it allowing it to illuminate a status LED too?
                             }
-                            LatchState::Enabled => {
+                            LatchState::Enabled(hash) => {
                                 //Doesn't matter if card is valid, this counts as a sign out
                                 info!("Signed out, device deactivated");
                                 relay_pin.set_low();
