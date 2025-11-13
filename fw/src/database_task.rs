@@ -349,7 +349,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, Noo
                     let excess_byte_count =(len + buf_offset)%33;
                     if excess_byte_count != 0  {
                         //odd bytes, need to copy these to the start of the buffer, and set offset appropriately
-                        //so the next read arrives at the right place
+                        //so the next read arrives at the right place and complete hash can be processed
                         let (left,right) = buf.split_at_mut((len + buf_offset) - excess_byte_count);
                         debug!("Len is {}, excess byte count is {}", len, excess_byte_count);
                         debug!("Left is \n{}, right is \n{}", core::str::from_utf8(left).unwrap(), core::str::from_utf8(right).unwrap());

@@ -60,7 +60,7 @@ impl LogTaskRunner {
             let hash = core::str::from_utf8(&hash).unwrap_or(" Non-ascii bytes in hash");
 
             //Get printable name for event, as expected by the Makerspace logging API
-            let event = match event {
+            let event_str = match event {
                 LogEvent::ACTIVATED(_) => {
                     "Activated"
                 },
@@ -98,19 +98,27 @@ impl LogTaskRunner {
             debug!("Connecting to {}", &url);
 
             let mut json_buf = [0x00;256];
-            let json = format_no_std::show(&mut json_buf, format_args!("{{ \"type\": \"{}\", \"hash\": \"{}\"}}", event, hash)).expect("Unable to build JSON log event");
+            let json = format_no_std::show(&mut json_buf, format_args!("{{ \"type\": \"{}\", \"hash\": \"{}\"}}", event_str, hash)).expect("Unable to build JSON log event");
 
             debug!("Json string: {}", json);
             
             let mut resp_buf = [0x00;128];
 
             if let Ok(req)  = http_client.request(Method::POST, &url).await {
-                if let Ok(_) = req.content_type(reqwless::headers::ContentType::ApplicationJson)
+                if let Ok(e) = req.content_type(reqwless::headers::ContentType::ApplicationJson)
                     .body(json.as_bytes()).send(&mut resp_buf).await {
                     debug!("Log event POSTed successfully");
                 }
                 else {
                     error!("Unable to log event");
+                    match LOG_EVENT_QUEUE.try_send(event) {
+                        Ok(_) => {
+                            debug!("Log event requeued");
+                        },
+                        Err(_) => {
+                            error!("Unable to requeue failed event - it will be lost");
+                        },
+                    }
                 }
             };
 
