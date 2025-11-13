@@ -110,7 +110,8 @@ impl LogTaskRunner {
                     debug!("Log event POSTed successfully");
                 }
                 else {
-                    error!("Unable to log event");
+                    error!("Unable to log event - will attempt to requeue");
+                    //NB this will cause the event to go to the back of the queue, so its' order will be wrong
                     match LOG_EVENT_QUEUE.try_send(event) {
                         Ok(_) => {
                             debug!("Log event requeued");

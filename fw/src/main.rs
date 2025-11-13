@@ -163,8 +163,7 @@ async fn main(spawner: Spawner) {
     //Spawn the database task
     spawner.must_spawn(database_task(DatabaseRunner::new(spi_flash, 2 * 1024 * 1024, 0x00, stack)));
 
-    //Spawn the log task
-
+    //Spawn the logger task
     spawner.must_spawn(log_task(LogTaskRunner::new(stack)));
 
     //Spawn the watchdog task
@@ -179,7 +178,7 @@ async fn main(spawner: Spawner) {
             .await
         {
             Ok(_) => {
-                info!("WiFi network {} joined", CONFIG.ssid);
+                info!("WiFi network {} joined, configuring stack", CONFIG.ssid);
                 break;
             },
             Err(err) => {
@@ -189,17 +188,13 @@ async fn main(spawner: Spawner) {
         }
     }
 
-    //Continue to init the wifi stack
-    info!("DHCP init");
+    //Complete init of Wifi stack
+    debug!("DHCP init");
     stack.wait_config_up().await;
-    info!("DHCP ready, link init");
+    debug!("Config ready, awaiting link up");
     stack.wait_link_up().await;
-    info!("Link ready, awaiting stack up");
+    debug!("Link ready, awaiting config up");
     stack.wait_config_up().await;
-    info!("Stack ready");
-
-    loop {
-        Timer::after_secs(10).await;
-    }
+    info!("Wifi ready");
 }
 
