@@ -429,28 +429,9 @@ async fn get_remote_db_version(
     let mut rx_buffer = [0; 2048];
 
     debug!("Creating HTTP request");
-    let mut request = match embassy_time::with_timeout(
-        CONFIG.http_timeout,
-        http_client.request(Method::GET, &url),
-    )
-    .await
-    {
-        Ok(e) => e?,
-        Err(_) => {
-            error!("Timeout creating http request");
-            return Err(UpdateError::Timeout);
-        }
-    };
-
+    let mut request =  http_client.request(Method::GET, &url).await?;
     debug!("Connecting");
-    let response =
-        match embassy_time::with_timeout(CONFIG.http_timeout, request.send(&mut rx_buffer)).await {
-            Ok(e) => e?,
-            Err(_) => {
-                error!("Timeout connecting to server {}", url);
-                return Err(UpdateError::Timeout);
-            }
-        };
+    let response = request.send(&mut rx_buffer).await?;
 
     if !StatusCode::is_successful(&response.status) {
         error!("Http server error: {}", &response.status);
