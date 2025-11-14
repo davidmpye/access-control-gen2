@@ -84,17 +84,10 @@ async fn log_task(runner: LogTaskRunner) -> ! {
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-    let mut rng = RoscRng;
 
-    let fw = include_bytes!("../cyw43-firmware/43439A0.bin");
-    let clm = include_bytes!("../cyw43-firmware/43439A0_clm.bin");
-    // To make flashing faster for development, you may want to flash the firmwares independently
-    // at hardcoded addresses, instead of baking them into the program with `include_bytes!`:
-    //     probe-rs download 43439A0.bin --binary-format bin --chip RP2040 --base-address 0x10100000
-    //     probe-rs download 43439A0_clm.bin --binary-format bin --chip RP2040 --base-address 0x10140000
-    //let fw = unsafe { core::slice::from_raw_parts(0x10100000 as *const u8, 230321) };
-    //let clm = unsafe { core::slice::from_raw_parts(0x10140000 as *const u8, 4752) };
-
+    //Spawn the watchdog task
+    spawner.must_spawn(watchdog_task(p.WATCHDOG, Output::new(p.PIN_6, Level::High)));
+   
     let pwr = Output::new(p.PIN_23, Level::Low);
     let cs = Output::new(p.PIN_25, Level::High);
     let mut pio = Pio::new(p.PIO0, Irqs);
@@ -124,8 +117,10 @@ async fn main(spawner: Spawner) {
         spi_flash.device_id().expect("Unable to read flash ID")
     );
 
-    //Wifi setup
+    //Wifi hardware setup
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
+    let fw = include_bytes!("../cyw43-firmware/43439A0.bin");
+    let clm = include_bytes!("../cyw43-firmware/43439A0_clm.bin");
     let state = STATE.init(cyw43::State::new());
     let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
     unwrap!(spawner.spawn(cyw43_task(runner)));
@@ -137,6 +132,7 @@ async fn main(spawner: Spawner) {
 
     // Init network stack
     let config = WifiConfig::dhcpv4(Default::default());
+    let mut rng = RoscRng;
     let seed = rng.next_u64();
     static RESOURCES: StaticCell<StackResources<5>> = StaticCell::new();
     let (stack, runner) = embassy_net::new(
@@ -190,9 +186,6 @@ async fn main(spawner: Spawner) {
 
     //Spawn the logger task
     spawner.must_spawn(log_task(LogTaskRunner::new(stack)));
-
-    //Spawn the watchdog task
-    spawner.must_spawn(watchdog_task(p.WATCHDOG, Output::new(p.PIN_6, Level::High)));
 
     loop {
         match control
