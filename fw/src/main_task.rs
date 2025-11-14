@@ -29,20 +29,33 @@ pub async fn main_task(
     //Receives message of new RFID read via signal, passes to database task.
     //Receives message from database task - card allowed, card denied
     //Activates appropriate LED +- FET
+    //Sends message to the log task queue so it can update the backend
     let mut latch_state = LatchState::Disabled;
 
     loop {
         //Await a message from the card reader handler
         match CARDREADER_EVENT_SIGNAL.wait().await {
-            CardReaderEvent::CardMD5(hash) => {
-                info!("Card hash received by main task");
-                //Check if card valid
-                DATABASE_COMMAND_SIGNAL.signal(DatabaseTaskCommand::CheckMD5Hash(hash));
+            CardReaderEvent::CardMD5(digest) => {
+                //Format the digest into an ascii string, as that's what we currently use as the in-flash representation (legacy!)             
+                let mut hash_buf = [0x00u8; 32];
+                let hash_str = match format_no_std::show(&mut hash_buf, format_args!("{:032x}", digest)) {
+                    Ok(str) => {
+                        str
+                    }
+                    Err(_e) => {
+                        error!("Unable to format MD5 hash");
+                        continue;
+                    }
+                };
+                info!("Card read with hash {}", hash_str);
+                //Check if card valid - we use the hash_buf to avoid lifetime issues
+                DATABASE_COMMAND_SIGNAL.signal(DatabaseTaskCommand::CheckMD5Hash(hash_buf));
                 info!("Awaiting database task reply");
                 let card_valid = match DATABASE_RESPONSE_SIGNAL.wait().await {
                     DatabaseTaskResponse::Found => true,
                     _ => false,
                 };
+                
                 match CONFIG.latch_mode {
                     LatchMode::Latching => {
                         match latch_state {
@@ -51,14 +64,14 @@ pub async fn main_task(
                                     info!("Card valid, access granted");
                                     relay_pin.set_high();
                                     allowed_led.set_high();
-                                    latch_state = LatchState::Enabled(hash);
-                                    queue_log_message(LogEvent::ACTIVATED(hash));
+                                    latch_state = LatchState::Enabled(hash_buf);
+                                    queue_log_message(LogEvent::ACTIVATED(hash_buf));
                                 } else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
                                     Timer::after_secs(2).await;
                                     denied_led.set_low();
-                                    queue_log_message(LogEvent::LOGINFAIL(hash));
+                                    queue_log_message(LogEvent::LOGINFAIL(hash_buf));
                                 }
                                 //Todo - if we are using a remote cardreader, could we send a message back to it allowing it to illuminate a status LED too?
                             }
@@ -74,20 +87,20 @@ pub async fn main_task(
                     }
                     LatchMode::Timed(time) => {
                         if card_valid {
-                            info!("Card valid, activating for {} seconds", time.as_secs());
+                            info!("Card valid, latching for {} seconds", time.as_secs());
                             relay_pin.set_high();
                             allowed_led.set_high();
                             Timer::after(time).await;
                             relay_pin.set_low();
                             allowed_led.set_low();
-                            info!("Deactivated");
-                            queue_log_message(LogEvent::ACTIVATED(hash));
+                            debug!("Deactivated");
+                            queue_log_message(LogEvent::ACTIVATED(hash_buf));
                         } else {
                             info!("Card invalid, access denied");
                             denied_led.set_high();
                             Timer::after_secs(2).await;
                             denied_led.set_low();
-                            queue_log_message(LogEvent::LOGINFAIL(hash));
+                            queue_log_message(LogEvent::LOGINFAIL(hash_buf));
                         }
                     }
                 }

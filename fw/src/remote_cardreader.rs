@@ -32,7 +32,7 @@ pub enum RemoteError {
 }
 
 pub enum CardReaderEvent {
-    CardMD5([u8; 32]),
+    CardMD5(md5::Digest),
 }
 
 pub static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> = Signal::new();
@@ -44,15 +44,15 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
             Ok(msg) => match msg {
                 Message::SingleUid(data) => {
                     debug!("Single UID card - {}", data);
-                    handle_card_digest(md5::compute(data)).await;
+                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
                 Message::DoubleUid(data) => {
                     debug!("Double UID card - {}", data);
-                    handle_card_digest(md5::compute(data)).await;
+                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
                 Message::TripleUid(data) => {
                     debug!("Triple UID card - {}", data);
-                    handle_card_digest(md5::compute(data)).await;
+                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
                 Message::ReadError => {
                     error!("Card read error");
@@ -63,7 +63,7 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
                 Message::JustReset => {
                     //NB this may happen if the card reader hangs,
                     //and the watchdog resets the MCU, as well as at initial power on
-                    info!("Reader just reset");
+                    warn!("Reader just reset");
                 }
                 Message::KeepAlive => {
                     debug!("Reader keepalive received");
@@ -99,18 +99,4 @@ async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, 
     //If we are here, we have hit the end of the buffer
     error!("Rx buffer overflow");
     return Err(RemoteError::RxBufferOverflow);
-}
-
-async fn handle_card_digest(digest: md5::Digest) {
-    let mut buf = [0x00u8; 32];
-    match format_no_std::show(&mut buf, format_args!("{:032x}", digest)) {
-        Ok(str) => {
-            info!("Read card with MD5 hash {}", str);
-            //Signal card reader event
-            CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(buf));
-        }
-        Err(_e) => {
-            error!("Unable to format MD5 hash");
-        }
-    }
 }

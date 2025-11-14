@@ -158,7 +158,7 @@ where
                 Ok(val) => val,
                 Err(_e) => {
                     error!(
-                        "DB version tag missing from flash- writing tag as 0x00 to force update"
+                        "DB version tag missing from flash - writing tag as 0x00 to force update"
                     );
                     let mut wtx = db.write_transaction().await;
                     wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
@@ -166,10 +166,6 @@ where
                     &[0x00]
                 }
             };
-            info!(
-                "Local hash database mounted OK, version {:a}",
-                current_db_version
-            );
 
             let rtx = db.read_transaction().await;
 
@@ -184,7 +180,8 @@ where
                 //Without a brief 1 micro wait, the watchdog doesnt have a chance to run.....
                 Timer::after_micros(1).await;
             }
-            info!("Local db count is {}", count - 1); //-1 to account for the __DB_VERSION__ key
+
+            info!("Local database version: {}, containing {} RFID hashes", current_db_version, count - 1); //-1 to account for the __DB_VERSION__ key
         }
 
         let mut last_sync_attempt_time = Instant::MIN;

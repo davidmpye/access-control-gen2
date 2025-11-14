@@ -113,8 +113,6 @@ async fn main(spawner: Spawner) {
     let (sck, mosi, miso, cs) = (p.PIN_10, p.PIN_11, p.PIN_12, &p.PIN_13);
     let spi1: Spi<'_, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking> =
         Spi::new_blocking(p.SPI1, sck, mosi, miso, SpiConfig::default());
-    //NB - also need to set FLASH_WP and FLASH_HOLD - these probably don't need to be on GPIOs, and could just be
-    //permanently set because we don't use them
     let flash_wp = Output::new(p.PIN_14, Level::Low); //WP is ACTIVE LOW - start with flash WP set
     let flash_hold = Output::new(p.PIN_9, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
     let flash_cs = Output::new(p.PIN_13, Level::High); //SPI flash CS pin
@@ -185,7 +183,7 @@ async fn main(spawner: Spawner) {
     //Spawn the database task
     spawner.must_spawn(database_task(DatabaseRunner::new(
         spi_flash,
-        2 * 1024 * 1024,
+        2 * 1024 * 1024, //2mbit
         0x00,
         stack,
     )));
@@ -223,5 +221,5 @@ async fn main(spawner: Spawner) {
     debug!("Link ready, awaiting config up");
     stack.wait_config_up().await;
     info!("Wifi ready");
-    //Main is now complete - the peripherals/tasks/stack are operational
+    //Main function is now complete - the peripherals/tasks/stack are operational
 }

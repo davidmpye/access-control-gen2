@@ -21,6 +21,9 @@ use reqwless::{request::RequestBuilder, response::StatusCode};
 
 use crate::CONFIG;
 
+
+const MAX_QUEUE_LEN: usize = 32usize;
+
 pub(crate) enum LogEvent {
     ACTIVATED([u8; 32]),
     DEACTIVATED([u8; 32]),
@@ -29,8 +32,8 @@ pub(crate) enum LogEvent {
 }
 
 //The queue can hold 32 events awaiting logging
-pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, 16> =
-    Channel::<ThreadModeRawMutex, LogEvent, 16>::new();
+pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN> =
+    Channel::<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN>::new();
 
 pub struct LogTaskRunner {
     stack: Stack<'static>,
@@ -157,6 +160,7 @@ impl LogTaskRunner {
             error!("Client request error");
             Err(())
         };
-        x
+        x   //Keeps the borrow checker happy - otherwise there are issues with lifetimes of the buffers that http_client holds
+
     }
 }
