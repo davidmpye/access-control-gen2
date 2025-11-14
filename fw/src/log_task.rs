@@ -3,16 +3,13 @@ use embassy_net::{
     tcp::client::{TcpClient, TcpClientState},
     Stack,
 };
-
 use embassy_rp::clocks::RoscRng;
-
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_time::{Timer, WithTimeout};
 
 use defmt::*;
 
-use embassy_time::{Timer, WithTimeout};
-use log::Log;
 use rand::RngCore;
 
 use reqwless::client::{HttpClient, TlsConfig, TlsVerify};

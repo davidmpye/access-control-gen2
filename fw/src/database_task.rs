@@ -1,32 +1,30 @@
-use defmt::*;
-
-use embedded_io_async::Read;
-use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
-
 use embassy_net::{
     dns::DnsSocket,
     tcp::client::{TcpClient, TcpClientState},
     Stack,
 };
+
 use embassy_rp::clocks::RoscRng;
-
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
-
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
-
 use embassy_time::{Duration, Instant, Timer, WithTimeout};
+
+use defmt::*;
 
 use ekv::flash::{self, PageID};
 use ekv::{config, Database};
 
+use embedded_io_async::Read;
+use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
+
 use heapless::Vec;
+
+use rand::RngCore;
 
 use reqwless::client::{HttpClient, TlsConfig, TlsVerify};
 use reqwless::request::Method;
 use reqwless::response::StatusCode;
-
-use rand::RngCore;
 
 use crate::config::CONFIG;
 

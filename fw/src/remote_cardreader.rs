@@ -6,10 +6,12 @@ use embassy_rp::uart::{
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 
+use defmt::*;
+
 use postcard::from_bytes_cobs;
+
 use serde::{Deserialize, Serialize};
 
-use defmt::*;
 
 //The card reader messages we send
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
