@@ -200,7 +200,7 @@ where
                     error!("Database sync failed");
                 }
             }
-            info!("Now awaiting database command signal");
+            debug!("Now awaiting database command signal");
             //Purpose of timeout is to give us an opportunity to check, every 60s, if we need to do a DB update
             match embassy_time::with_timeout(
                 Duration::from_secs(60),
@@ -223,8 +223,7 @@ where
                     }
                 },
                 Err(_) => {
-                    info!("Timed out awaiting signal, will check if update ready");
-                    //Timeout
+                    debug!("Timed out awaiting signal, will check if update ready");
                 }
             }
         }
