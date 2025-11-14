@@ -186,28 +186,22 @@ where
 
         loop {
             //Sync 60 seconds after startup (to let wifi come up) and at specified intervals
-            if last_sync_attempt_time == Instant::MIN
-                && Instant::now() > Instant::MIN + Duration::from_secs(60)
-                || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency
+            if self.stack.is_config_up() && 
+                (
+                    (last_sync_attempt_time == Instant::MIN && Instant::now() > Instant::MIN + Duration::from_secs(60))
+                    || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency
+                )
             {
                 last_sync_attempt_time = Instant::now();
-                info!("Database sync due - attempting");
-
-                match sync_database(&db, self.stack).with_timeout(CONFIG.http_timeout).await {
-                    Ok(res) => {
-                        match res {
-                            Ok(_) => {
-                                info!("Database sync successful");
-                            },
-                            Err(_) => {
-                                error!("Database sync failed");
-                            },
-                        }
-                    }
-                    Err(_timeout) => {
-                        error!("Database update failed - timeout");
-                    }
-                }
+                
+                match sync_database(&db, self.stack).await {
+                    Ok(_) => {
+                        info!("Database sync successful");
+                    },
+                    Err(_) => {
+                        error!("Database sync failed");
+                    },
+                }           
             }
             debug!("Now awaiting database command signal");
             //Purpose of timeout is to give us an opportunity to check, every 60s, if we need to do a DB update
@@ -324,9 +318,33 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 //Make connection
                 let mut rx_buffer = [0; 2048];
                 info!("Creating HTTP request");
-                let mut request = http_client.request(Method::GET, &url).await?;
+
+                let mut request = match embassy_time::with_timeout(
+                    CONFIG.http_timeout,
+                    http_client.request(Method::GET, &url),
+                )
+                .await
+                {
+                    Ok(e) => e?,
+                    Err(_) => {
+                        error!("Timeout creating http request");
+                        return Err(UpdateError::Timeout);
+                    }
+                };
+
                 debug!("Connecting");
-                let response = request.send(&mut rx_buffer).await?;
+                let response = match embassy_time::with_timeout(
+                    CONFIG.http_timeout,
+                    request.send(&mut rx_buffer),
+                )
+                .await
+                {
+                    Ok(e) => e?,
+                    Err(_) => {
+                        error!("Database update failed (timed out)");
+                        return Err(UpdateError::Timeout);
+                    }
+                };
                
                 if !StatusCode::is_successful(&response.status) {
                     error!("Http connection error: {}", &response.status);
@@ -423,13 +441,35 @@ async fn get_remote_db_version(
     )
     .expect("Unable to build DB update URL");
     debug!("Obtaining remote database version from {}", url);
+    
     //Make connection
     let mut rx_buffer = [0; 2048];
-
-    debug!("Creating HTTP request");
-    let mut request =  http_client.request(Method::GET, &url).await?;
+    let mut request = match embassy_time::with_timeout(
+        CONFIG.http_timeout,
+        http_client.request(Method::GET, &url),
+        )
+        .await
+        {
+            Ok(e) => e?,
+            Err(_) => {
+                error!("Timeout creating http request");
+                return Err(UpdateError::Timeout);
+            }
+    };
     debug!("Connecting");
-    let response = request.send(&mut rx_buffer).await?;
+    let response = match embassy_time::with_timeout(
+        CONFIG.http_timeout,
+        request.send(&mut rx_buffer),
+    )
+    .await
+    {
+        Ok(e) => e?,
+        Err(_) => {
+            error!("Database update failed (timed out)");
+            return Err(UpdateError::Timeout);
+        }
+    };
+               
 
     if !StatusCode::is_successful(&response.status) {
         error!("Http server error: {}", &response.status);

@@ -18,7 +18,6 @@ use reqwless::{request::RequestBuilder, response::StatusCode};
 
 use crate::CONFIG;
 
-
 const MAX_QUEUE_LEN: usize = 32usize;
 
 pub(crate) enum LogEvent {
@@ -31,6 +30,24 @@ pub(crate) enum LogEvent {
 //The queue can hold 32 events awaiting logging
 pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN> =
     Channel::<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN>::new();
+
+
+
+pub enum LogError {
+    WifiNotConnected,
+    ConnectionError, //Reqwless unable to connect
+    Timeout,
+    RemoteServerError(reqwless::response::StatusCode), //Http error from remote server (not 200!)
+    InvalidDbVersion, //DBVersion should (currently) be a 16 byte MD5 hash
+}
+
+impl From<reqwless::Error> for LogError {
+    fn from(_err: reqwless::Error) -> Self {
+        Self::ConnectionError
+    }
+}
+
+
 
 pub struct LogTaskRunner {
     stack: Stack<'static>,
@@ -52,27 +69,12 @@ impl LogTaskRunner {
 
             //Await an event from the queue
             let event = LOG_EVENT_QUEUE.receive().await;
-            match self
-                .log_event(&event)
-                .with_timeout(CONFIG.http_timeout)
-                .await
-            {
-                Ok(result) => {
-                    match result {
-                        Ok(_) => {
-                            info!("Log event recorded successfully")
-                        }
-                        Err(_) => {
-                            warn!("Log event failed, will be requeued");
-                            //Attempt to requeue
-                            if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
-                                error!("Unable to requeue - this event will be lost")
-                            }
-                        }
-                    }
+            match self.log_event(&event).await {
+                Ok(_) => {
+                    info!("Log event recorded successfully")
                 }
-                Err(_timeout) => {
-                    warn!("Log event timeout, will be requeued");
+                Err(_) => {
+                    warn!("Log event failed, will be requeued");
                     //Attempt to requeue
                     if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
                         error!("Unable to requeue - this event will be lost")
@@ -82,7 +84,7 @@ impl LogTaskRunner {
         }
     }
 
-    async fn log_event(&self, event: &LogEvent) -> Result<(), ()> {
+    async fn log_event(&self, event: &LogEvent) -> Result<(), LogError> {
         //Convert hash to ascii string representation
         let hash = match event {
             LogEvent::ACTIVATED(hash) | LogEvent::DEACTIVATED(hash) | LogEvent::LOGINFAIL(hash) => {
@@ -138,26 +140,47 @@ impl LogTaskRunner {
         .expect("Unable to build JSON log event");
 
         debug!("Json string: {}", json);
-
         let mut rx_buf = [0x00; 512];
 
-        let x = if let Ok(req) = http_client.request(Method::POST, &url).await {
-            if let Ok(_e) = req
-                .content_type(reqwless::headers::ContentType::ApplicationJson)
-                .body(json.as_bytes())
-                .send(&mut rx_buf)
-                .await
-            {
-                Ok(())
-            } else {
-                error!("HTTP response error");
-                Err(())
+        let request = match http_client.request(Method::POST, &url).with_timeout(CONFIG.http_timeout)
+        .await
+        {
+            Ok(e) => e?,
+            Err(_timeout) => {
+                error!("Timeout creating http request");
+                return Err(LogError::Timeout);
             }
-        } else {
-            error!("Client request error");
-            Err(())
         };
-        x   //Keeps the borrow checker happy - otherwise there are issues with lifetimes of the buffers that http_client holds
 
+        debug!("Connecting");
+        let retval = match request.content_type(reqwless::headers::ContentType::ApplicationJson)
+            .body(json.as_bytes())
+            .send(&mut rx_buf).with_timeout(CONFIG.http_timeout)
+            .await
+        {
+            Ok(result) => {
+                match result {
+                    Ok(response) => {
+                        //Valid HTTP response received - check it is 'ok'
+                        if StatusCode::is_successful(&response.status) {
+                            //Success!
+                            Ok(())
+                        }
+                        else {
+                            //Successfully connected, but didn't get 200 OK (or another success code)
+                            Err(LogError::RemoteServerError(response.status))
+                        }
+                    },
+                    Err(_f) => {
+                        Err(LogError::ConnectionError)
+                    },
+                }
+            },
+            Err(_timeout) => {
+                error!("Database update failed (timed out)");
+                Err(LogError::Timeout)            
+            }
+        };
+        retval //Borrow checker gets unhappy otherwise!
     }
 }
