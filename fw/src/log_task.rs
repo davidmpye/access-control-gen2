@@ -79,6 +79,8 @@ impl LogTaskRunner {
                     if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
                         error!("Unable to requeue - this event will be lost")
                     }
+                    //Don't try to log again for another minute after a failed attempt to stop spamming the backend
+                    Timer::after_secs(60).await;
                 }
             }
         }
@@ -104,7 +106,7 @@ impl LogTaskRunner {
         };
 
         //Build a fresh http client for each database update attempt
-        info!("Log task making connection to log endpoint");
+        debug!("Connecting to log endpoint");
         let mut tls_read_buffer = [0; 8096];
         let mut tls_write_buffer = [0; 8096];
         let mut rng = RoscRng;
