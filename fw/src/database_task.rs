@@ -226,7 +226,7 @@ where
                     }
                 },
                 Err(_) => {
-                    debug!("Timed out awaiting signal, will check if update ready");
+                    debug!("Database command signal timeout, will check if update is due");
                 }
             }
         }
@@ -288,6 +288,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
         .ok()
         .expect("Fatal error - unable to read database version");
     info!("Current database version: {:a}", current_db_version);
+    //Must drop rtx, otherwise attempting to set up a wtx will block
     drop(rtx);
 
     match get_remote_db_version(&mut http_client).await {

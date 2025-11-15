@@ -38,7 +38,6 @@ pub enum LogError {
     ConnectionError, //Reqwless unable to connect
     Timeout,
     RemoteServerError(reqwless::response::StatusCode), //Http error from remote server (not 200!)
-    InvalidDbVersion, //DBVersion should (currently) be a 16 byte MD5 hash
 }
 
 impl From<reqwless::Error> for LogError {
@@ -46,8 +45,6 @@ impl From<reqwless::Error> for LogError {
         Self::ConnectionError
     }
 }
-
-
 
 pub struct LogTaskRunner {
     stack: Stack<'static>,
@@ -60,13 +57,6 @@ impl LogTaskRunner {
 
     pub async fn run(self) -> ! {
         loop {
-            //If we have no wifi connection, retry in 60 seconds
-            while !self.stack.is_config_up() {
-                warn!("Log task waiting - no wifi connection");
-                //Wait 60 seconds and try again.
-                Timer::after_secs(60).await;
-            }
-
             //Await an event from the queue
             let event = LOG_EVENT_QUEUE.receive().await;
             match self.log_event(&event).await {
@@ -79,7 +69,7 @@ impl LogTaskRunner {
                     if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
                         error!("Unable to requeue - this event will be lost")
                     }
-                    //Don't try to log again for another minute after a failed attempt to stop spamming the backend
+                    //Don't try to log again for another minute after a failed attempt
                     Timer::after_secs(60).await;
                 }
             }
@@ -87,6 +77,12 @@ impl LogTaskRunner {
     }
 
     async fn log_event(&self, event: &LogEvent) -> Result<(), LogError> {
+        //Abandon if wifi not running
+        while !self.stack.is_config_up() {
+            warn!("Log event failed, wifi not yet up");
+            return Err(LogError::WifiNotConnected);
+        }
+
         //Convert hash to ascii string representation
         let hash = match event {
             LogEvent::ACTIVATED(hash) | LogEvent::DEACTIVATED(hash) | LogEvent::LOGINFAIL(hash) => {
@@ -139,7 +135,7 @@ impl LogTaskRunner {
             &mut json_buf,
             format_args!("{{ \"type\": \"{}\", \"hash\": \"{}\"}}", event_str, hash),
         )
-        .expect("Unable to build JSON log event");
+        .expect("Unable to build JSON string event");
 
         debug!("Json string: {}", json);
         let mut rx_buf = [0x00; 512];
@@ -149,7 +145,7 @@ impl LogTaskRunner {
         {
             Ok(e) => e?,
             Err(_timeout) => {
-                error!("Timeout creating http request");
+                error!("Log attempt failed (request timeout)");
                 return Err(LogError::Timeout);
             }
         };
@@ -173,13 +169,13 @@ impl LogTaskRunner {
                             Err(LogError::RemoteServerError(response.status))
                         }
                     },
-                    Err(_f) => {
+                    Err(_error) => {
                         Err(LogError::ConnectionError)
                     },
                 }
             },
             Err(_timeout) => {
-                error!("Database update failed (timed out)");
+                error!("Log attempt failed (send timeout)");
                 Err(LogError::Timeout)            
             }
         };
