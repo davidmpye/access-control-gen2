@@ -9,6 +9,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Timer, WithTimeout};
 
 use defmt::*;
+use defmt::{write, Format, Formatter};
 
 use rand::RngCore;
 
@@ -31,8 +32,6 @@ pub(crate) enum LogEvent {
 pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN> =
     Channel::<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN>::new();
 
-
-
 pub enum LogError {
     WifiNotConnected,
     ConnectionError, //Reqwless unable to connect
@@ -43,6 +42,18 @@ pub enum LogError {
 impl From<reqwless::Error> for LogError {
     fn from(_err: reqwless::Error) -> Self {
         Self::ConnectionError
+    }
+}
+
+impl Format for LogError {
+    fn format(&self, fmt: Formatter) {
+        let str = match self {
+            LogError::WifiNotConnected => "Wifi not connected",
+            LogError::ConnectionError => "Connection error",
+            LogError::Timeout => "Timeout",
+            LogError::RemoteServerError(_http_status) => "HTTP error",
+        };
+        write!(fmt, "{}", str);
     }
 }
 
@@ -63,8 +74,8 @@ impl LogTaskRunner {
                 Ok(_) => {
                     info!("Log event recorded successfully")
                 }
-                Err(_) => {
-                    warn!("Log event failed, will be requeued");
+                Err(e) => {
+                    warn!("Log event failed ({}), will be requeued", e);
                     //Attempt to requeue
                     if let Err(_e) = LOG_EVENT_QUEUE.try_send(event) {
                         error!("Unable to requeue - this event will be lost")
@@ -79,7 +90,6 @@ impl LogTaskRunner {
     async fn log_event(&self, event: &LogEvent) -> Result<(), LogError> {
         //Abandon if wifi not running
         while !self.stack.is_config_up() {
-            warn!("Log event failed, wifi not yet up");
             return Err(LogError::WifiNotConnected);
         }
 
@@ -145,7 +155,6 @@ impl LogTaskRunner {
         {
             Ok(e) => e?,
             Err(_timeout) => {
-                error!("Log attempt failed (request timeout)");
                 return Err(LogError::Timeout);
             }
         };
@@ -175,7 +184,6 @@ impl LogTaskRunner {
                 }
             },
             Err(_timeout) => {
-                error!("Log attempt failed (send timeout)");
                 Err(LogError::Timeout)            
             }
         };
