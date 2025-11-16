@@ -10,7 +10,7 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Instant, Timer, WithTimeout};
 
-use defmt::*;
+use defmt::{Format, write, *};
 
 use ekv::flash::{self, PageID};
 use ekv::{config, Database};
@@ -48,6 +48,19 @@ pub enum UpdateError {
 impl From<reqwless::Error> for UpdateError {
     fn from(_err: reqwless::Error) -> Self {
         Self::ConnectionError
+    }
+}
+
+impl Format for UpdateError {    
+    fn format(&self, fmt: Formatter) {
+        let str = match self {
+            UpdateError::WifiNotConnected => "Wifi not connected",
+            UpdateError::ConnectionError => "Connection error",
+            UpdateError::Timeout => "Timeout",
+            UpdateError::RemoteServerError(_http_status) => "HTTP error",
+            UpdateError::InvalidDbVersion => "Invalid DB version",
+        };
+        write!(fmt, "{}", str);
     }
 }
 
@@ -198,8 +211,8 @@ where
                     Ok(_) => {
                         info!("Database sync successful");
                     },
-                    Err(_) => {
-                        error!("Database sync failed");
+                    Err(err) => {
+                        error!("Database sync failed - {}", err);
                     },
                 }           
             }
@@ -328,7 +341,6 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 {
                     Ok(e) => e?,
                     Err(_) => {
-                        error!("Timeout creating http request");
                         return Err(UpdateError::Timeout);
                     }
                 };
@@ -342,13 +354,11 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 {
                     Ok(e) => e?,
                     Err(_) => {
-                        error!("Database update failed (timed out)");
                         return Err(UpdateError::Timeout);
                     }
                 };
                
                 if !StatusCode::is_successful(&response.status) {
-                    error!("Http connection error: {}", &response.status);
                     return Err(UpdateError::RemoteServerError(response.status));
                 }
 
@@ -423,7 +433,6 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
             Ok(())
         }
         Err(e) => {
-            error!("Unable to get remote DB version");
             return Err(e);
         }
     }
@@ -453,7 +462,6 @@ async fn get_remote_db_version(
         {
             Ok(e) => e?,
             Err(_) => {
-                error!("Timeout creating http request");
                 return Err(UpdateError::Timeout);
             }
     };
@@ -466,14 +474,12 @@ async fn get_remote_db_version(
     {
         Ok(e) => e?,
         Err(_) => {
-            error!("Database update failed (timed out)");
             return Err(UpdateError::Timeout);
         }
     };
                
 
     if !StatusCode::is_successful(&response.status) {
-        error!("Http server error: {}", &response.status);
         return Err(UpdateError::RemoteServerError(response.status));
     }
 
