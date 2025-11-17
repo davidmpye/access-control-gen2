@@ -178,21 +178,8 @@ where
                 }
             };
 
-            let rtx = db.read_transaction().await;
 
-            let mut cursor = rtx.read_all().await.expect("Cursor fail");
-            let mut count = 0usize;
-
-            let mut keybuf = [0x00u8; 32];
-            let mut valbuf = [0x00u8; 32];
-
-            while cursor.next(&mut keybuf, &mut valbuf).await.ok() != Some(None) {
-                count += 1;
-                //Without a brief 1 micro wait, the watchdog doesnt have a chance to run.....
-                Timer::after_micros(1).await;
-            }
-
-            info!("Local database version: {}, containing {} RFID hashes", current_db_version, count - 1); //-1 to account for the __DB_VERSION__ key
+            info!("Local database version: {}, containing {} RFID hashes", current_db_version, db_count(&db).await - 1); //-1 to account for the __DB_VERSION__ key
         }
 
         let mut last_sync_attempt_time = Instant::MIN;
@@ -261,6 +248,23 @@ async fn db_lookup<T: NorFlash + ReadNorFlash>(
         None
     }
 }
+
+async fn db_count<T:NorFlash + ReadNorFlash> (db: &Database<DbFlash<T>,NoopRawMutex>) -> usize {
+    let rtx = db.read_transaction().await;
+    let mut cursor = rtx.read_all().await.expect("Cursor fail");
+    let mut count = 0usize;
+
+    let mut keybuf = [0x00u8; 32];
+    let mut valbuf = [0x00u8; 32];
+
+    while cursor.next(&mut keybuf, &mut valbuf).await.ok() != Some(None) {
+        count += 1;
+        //Without a brief 1 micro wait, the watchdog doesnt have a chance to run.....
+        Timer::after_micros(1).await;
+    }
+    count
+}
+
 
 async fn sync_database<T: NorFlash + ReadNorFlash>(
     db: &Database<DbFlash<T>, NoopRawMutex>,
