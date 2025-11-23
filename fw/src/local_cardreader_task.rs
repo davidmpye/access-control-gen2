@@ -64,8 +64,8 @@ impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
                             }
                         };
                     }
-                    //Insert a brief delay in case wupa() ever just returns immediately - if so, we will spin.
-                    Timer::after_millis(1).await;
+                    //Wait 100mS between read attempts
+                    Timer::after_millis(100).await;
                 }
             } else {
                 error!("MFRC init failed, will retry in 10s");
