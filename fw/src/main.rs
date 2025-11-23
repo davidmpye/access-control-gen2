@@ -5,7 +5,6 @@
 use cyw43::JoinOptions;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 
-use embedded_hal::digital::OutputPin;
 //For SPI flash
 use w25q32jv::W25q32jv;
 

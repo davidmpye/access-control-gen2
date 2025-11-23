@@ -1,6 +1,6 @@
 use embassy_rp::peripherals::UART0;
 use embassy_rp::uart::{
-    Async, Config as UartConfig, InterruptHandler as UartInterruptHandler, Uart,
+    Async, Uart,
 };
 
 use defmt::*;

@@ -5,9 +5,6 @@ use embassy_time::Timer;
 
 use defmt::*;
 
-use crate::remote_cardreader_task::CardReaderEvent;
-use crate::remote_cardreader_task::CARDREADER_EVENT_SIGNAL;
-
 use crate::database_task::{DatabaseTaskCommand, DatabaseTaskResponse};
 use crate::database_task::{DATABASE_COMMAND_SIGNAL, DATABASE_RESPONSE_SIGNAL};
 
@@ -15,11 +12,11 @@ use crate::{config::LatchMode, CONFIG};
 
 use crate::{LogEvent, LOG_EVENT_QUEUE};
 
-pub enum CardReaderEvent {
+pub (crate) enum CardReaderEvent {
     CardMD5(md5::Digest),
 }
 
-pub static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> = Signal::new();
+pub (crate) static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> = Signal::new();
 
 enum LatchState {
     Enabled([u8;32]), //We store the card hash of the person who is signed into the controller
