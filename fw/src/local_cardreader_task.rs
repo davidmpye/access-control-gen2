@@ -36,7 +36,7 @@ impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
             let _ = self.rst.set_high();
 
             if let Ok(mut mfrc) = Mfrc522::new(interface).init() {
-                info!("MFRC522 instance initialised");
+                info!("MFRC522 init OK");
 
                 loop {
                     //If the MFRC disappears or goes into a fault state wupa() blocks,
@@ -68,7 +68,7 @@ impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
                     Timer::after_millis(1).await;
                 }
             } else {
-                error!("Unable to init MFRC522, will retry in 10s");
+                error!("MFRC init failed, will retry in 10s");
                 Timer::after_secs(10).await;
             }
         }
