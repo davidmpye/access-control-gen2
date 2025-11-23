@@ -5,10 +5,12 @@
 use cyw43::JoinOptions;
 use cyw43_pio::{PioSpi, DEFAULT_CLOCK_DIVIDER};
 
+use embedded_hal::digital::OutputPin;
 //For SPI flash
 use w25q32jv::W25q32jv;
 
 use defmt::*;
+
 use {defmt_rtt as _, panic_probe as _};
 
 use embassy_executor::Spawner;
@@ -22,20 +24,23 @@ use embassy_rp::spi::{Config as SpiConfig, Spi};
 use embassy_rp::uart::{Config as UartConfig, InterruptHandler as UartInterruptHandler, Uart};
 use embassy_time::{Delay, Timer};
 
+use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
+
 use static_cell::StaticCell;
 
-use embedded_hal_bus::spi::ExclusiveDevice;
 use rand::RngCore;
 
 mod database_task;
+mod local_cardreader_task;
 mod log_task;
 mod main_task;
-mod remote_cardreader;
+mod remote_cardreader_task;
 mod watchdog;
 
 use database_task::DatabaseRunner;
+use local_cardreader_task::LocalCardreaderTaskRunner;
 use main_task::main_task;
-use remote_cardreader::remote_cardreader_task;
+use remote_cardreader_task::remote_cardreader_task;
 use watchdog::watchdog_task;
 
 use log_task::{LogEvent, LogTaskRunner, LOG_EVENT_QUEUE};
@@ -66,7 +71,7 @@ async fn database_task(
             ExclusiveDevice<
                 Spi<'static, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking>,
                 Output<'static>,
-                embedded_hal_bus::spi::NoDelay,
+                NoDelay,
             >,
             Output<'static>,
             Output<'static>,
@@ -81,13 +86,27 @@ async fn log_task(runner: LogTaskRunner) -> ! {
     runner.run().await
 }
 
+#[embassy_executor::task]
+async fn local_cardreader_task(
+    mut runner: LocalCardreaderTaskRunner<
+        ExclusiveDevice<
+            Spi<'static, embassy_rp::peripherals::SPI0, embassy_rp::spi::Blocking>,
+            Output<'static>,
+            Delay,
+        >,
+        Output<'static>,
+    >,
+) -> ! {
+    runner.run().await
+}
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
 
     //Spawn the watchdog task
     spawner.must_spawn(watchdog_task(p.WATCHDOG, Output::new(p.PIN_6, Level::High)));
-   
+
     let pwr = Output::new(p.PIN_23, Level::Low);
     let cs = Output::new(p.PIN_25, Level::High);
     let mut pio = Pio::new(p.PIO0, Irqs);
@@ -151,9 +170,16 @@ async fn main(spawner: Spawner) {
         //Local task - will poll SPI cardreader over local bus
         let (sck, mosi, miso, cs) = (p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
         let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
-        let spi0 = ExclusiveDevice::new(spi0, cs, Delay);
-        defmt::todo!("Local cardreader mode not yet implemented");
-        //spawner.must_spawn(local_cardreader_task(spi));
+        let spi0: ExclusiveDevice<
+            Spi<'_, embassy_rp::peripherals::SPI0, embassy_rp::spi::Blocking>,
+            Output,
+            Delay,
+        > = ExclusiveDevice::new(spi0, Output::new(cs, Level::High), Delay);
+        debug!("Spawning local card reader task");
+        spawner.must_spawn(local_cardreader_task(LocalCardreaderTaskRunner::new(
+            spi0,
+            Output::new(p.PIN_21, Level::High),
+        )));
     } else {
         //Remote task
         info!("Remote cardreader mode selected");
@@ -167,6 +193,7 @@ async fn main(spawner: Spawner) {
             p.DMA_CH3,
             UartConfig::default(),
         );
+        debug!("Spawning remote card reader task");
         spawner.must_spawn(remote_cardreader_task(uart));
     }
 

@@ -3,8 +3,8 @@ use embassy_time::Timer;
 
 use defmt::*;
 
-use crate::remote_cardreader::CardReaderEvent;
-use crate::remote_cardreader::CARDREADER_EVENT_SIGNAL;
+use crate::remote_cardreader_task::CardReaderEvent;
+use crate::remote_cardreader_task::CARDREADER_EVENT_SIGNAL;
 
 use crate::database_task::{DatabaseTaskCommand, DatabaseTaskResponse};
 use crate::database_task::{DATABASE_COMMAND_SIGNAL, DATABASE_RESPONSE_SIGNAL};
