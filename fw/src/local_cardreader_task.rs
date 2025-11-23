@@ -31,41 +31,46 @@ impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
             Timer::after(Duration::from_millis(250)).await;
             let _ = self.rst.set_high();
 
-            if let Ok(mut mfrc) = Mfrc522::new(interface).init() {
-                info!("MFRC522 init OK");
-
-                loop {
-                    //If the MFRC disappears or goes into a fault state wupa() blocks,
-                    //and we have to rely on the watchdog to restart the controller
-                    if let Ok(atqa) = mfrc.wupa() {
-                        debug!("AtqA select");
-                        match mfrc.select(&atqa) {
-                            Ok(ref _uid @ Uid::Single(ref inner)) => {
-                                debug!("Single UID card read");
-                                CARDREADER_EVENT_SIGNAL
-                                    .signal(CardReaderEvent::CardMD5(md5::compute(&inner.as_bytes()[..4])))
-                            }
-                            Ok(ref _uid @ Uid::Double(ref inner)) => {
-                                debug!("Double UID card read");
-                                CARDREADER_EVENT_SIGNAL
-                                    .signal(CardReaderEvent::CardMD5(md5::compute(&inner.as_bytes()[..7])))
-                            }
-                            Ok(ref _uid @ Uid::Triple(ref inner)) => {
-                                debug!("Triple UID card read");
-                                CARDREADER_EVENT_SIGNAL
-                                    .signal(CardReaderEvent::CardMD5(md5::compute(&inner.as_bytes()[..10])))
-                            }
-                            Err(_e) => {
-                                error!("MFRC select error");
-                            }
-                        };
+            match Mfrc522::new(interface).init() {
+                Ok(mut mfrc) => {
+                    info!("MFRC522 init OK");
+                    loop {
+                        //If the MFRC disappears or goes into a fault state wupa() blocks,
+                        //and we have to rely on the watchdog to restart the controller
+                        if let Ok(atqa) = mfrc.wupa() {
+                            debug!("AtqA select");
+                            match mfrc.select(&atqa) {
+                                Ok(ref _uid @ Uid::Single(ref inner)) => {
+                                    debug!("Single UID card read");
+                                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(
+                                        md5::compute(&inner.as_bytes()[..4]),
+                                    ))
+                                }
+                                Ok(ref _uid @ Uid::Double(ref inner)) => {
+                                    debug!("Double UID card read");
+                                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(
+                                        md5::compute(&inner.as_bytes()[..7]),
+                                    ))
+                                }
+                                Ok(ref _uid @ Uid::Triple(ref inner)) => {
+                                    debug!("Triple UID card read");
+                                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(
+                                        md5::compute(&inner.as_bytes()[..10]),
+                                    ))
+                                }
+                                Err(_e) => {
+                                    error!("MFRC select error");
+                                }
+                            };
+                        }
+                        //Wait 100mS between read attempts
+                        Timer::after_millis(100).await;
                     }
-                    //Wait 100mS between read attempts
-                    Timer::after_millis(100).await;
                 }
-            } else {
-                error!("MFRC init failed, will retry in 10s");
-                Timer::after_secs(10).await;
+                Err(_) => {
+                    error!("MFRC init failed, will retry in 10s");
+                    Timer::after_secs(10).await;
+                }
             }
         }
     }
