@@ -1,17 +1,13 @@
-use embassy_rp::peripherals::SPI0;
-use embassy_rp::spi::{Blocking, Config as SpiConfig, Spi};
-
-use embassy_rp::gpio::AnyPin;
-use embedded_hal::digital::OutputPin;
-use embedded_hal::spi::SpiDevice;
+use embassy_time::{Duration, Timer};
 
 use defmt::*;
 
+use embedded_hal::digital::OutputPin;
+use embedded_hal::spi::SpiDevice;
+
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 
-use crate::remote_cardreader_task::{CardReaderEvent, CARDREADER_EVENT_SIGNAL};
-
-use embassy_time::{Duration, Timer};
+use crate::main_task::{CardReaderEvent, CARDREADER_EVENT_SIGNAL};
 
 pub struct LocalCardreaderTaskRunner<T: SpiDevice, U: OutputPin> {
     device: T,

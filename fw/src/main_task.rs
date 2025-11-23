@@ -1,4 +1,6 @@
 use embassy_rp::gpio::Output;
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 
 use defmt::*;
@@ -12,6 +14,12 @@ use crate::database_task::{DATABASE_COMMAND_SIGNAL, DATABASE_RESPONSE_SIGNAL};
 use crate::{config::LatchMode, CONFIG};
 
 use crate::{LogEvent, LOG_EVENT_QUEUE};
+
+pub enum CardReaderEvent {
+    CardMD5(md5::Digest),
+}
+
+pub static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> = Signal::new();
 
 enum LatchState {
     Enabled([u8;32]), //We store the card hash of the person who is signed into the controller

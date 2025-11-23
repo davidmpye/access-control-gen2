@@ -3,15 +3,13 @@ use embassy_rp::uart::{
     Async, Config as UartConfig, InterruptHandler as UartInterruptHandler, Uart,
 };
 
-use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::signal::Signal;
-
 use defmt::*;
 
 use postcard::from_bytes_cobs;
 
 use serde::{Deserialize, Serialize};
 
+use crate::main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent};
 
 //The card reader messages we send
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
@@ -32,12 +30,6 @@ pub enum RemoteError {
     UartError,        //Uart read error
     PostcardError,    //Unable to decode message using postcard - byte corruption?
 }
-
-pub enum CardReaderEvent {
-    CardMD5(md5::Digest),
-}
-
-pub static CARDREADER_EVENT_SIGNAL: Signal<ThreadModeRawMutex, CardReaderEvent> = Signal::new();
 
 #[embassy_executor::task]
 pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
