@@ -108,18 +108,22 @@ async fn main(spawner: Spawner) -> ! {
                             let message = match mfrc.select(&atqa) {
                                 Ok(ref _uid @ Uid::Single(ref inner)) => {
                                     debug!("Single UID card read");
-                                    let bytes = inner.as_bytes();
-                                    Message::SingleUid([bytes[0], bytes[1], bytes[2], bytes[3]])
+                                    let mut buf = [0x00;4];
+                                    buf.copy_from_slice(&inner.as_bytes()[..4]);
+                                    Message::SingleUid(buf)
                                 },
                                 Ok(ref _uid @ Uid::Double(ref inner)) => {
                                     debug!("Double UID card read");
-                                    let bytes = inner.as_bytes();
-                                    Message::DoubleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6]])
+                                    let mut buf = [0x00;7];
+                                    buf.copy_from_slice(&inner.as_bytes()[..7]);
+                                    Message::DoubleUid(buf)
                                 },
                                 Ok(ref _uid @ Uid::Triple(ref inner)) => {
                                     debug!("Triple UID card read");
-                                    let bytes = inner.as_bytes();
-                                    Message::TripleUid([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8], bytes[9]])
+
+                                    let mut buf = [0x00;10];
+                                    buf.copy_from_slice(&inner.as_bytes()[..10]);
+                                    Message::TripleUid(buf)
                                 },
                                 Err(_e) => {
                                     error!("MFRC select error");
