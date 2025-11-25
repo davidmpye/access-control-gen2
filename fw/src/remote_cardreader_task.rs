@@ -55,8 +55,9 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
                     error!("Reader fault");
                 }
                 Message::JustReset => {
-                    //NB this may happen if the card reader hangs,
-                    //and the watchdog resets the MCU, as well as at initial power on
+                    //NB Happens at:
+                    //initial power-on
+                    //watchdog reset (eg if card reader hangs)
                     warn!("Reader just reset");
                 }
                 Message::KeepAlive => {

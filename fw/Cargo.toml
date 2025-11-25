@@ -8,8 +8,8 @@ license = "MIT OR Apache-2.0"
 categories = [ "embedded", "no-std" ]
 
 [features]
-#Communicate with the cardreader over RS485
-default= [ "remote-cardreader" ]
+default= [ ] #No default features
+# Communicate via RS485 with a remote cardreader:
 remote-cardreader = []
 
 [env]
