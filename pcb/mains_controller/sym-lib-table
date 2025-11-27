@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "RS485_to_ttl")(type "KiCad")(uri "${KIPRJMOD}/RS485_to_ttl.kicad_sym")(options "")(descr ""))
+  (lib (name "dc_dc")(type "KiCad")(uri "${KIPRJMOD}/dc_dc.kicad_sym")(options "")(descr ""))
+)
