@@ -6980,7 +6980,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "Relay_SPDT"
+		(property "Value" "G2RL-1-E-DC5"
 			(at 165.1 74.9299 0)
 			(effects
 				(font
@@ -6999,7 +6999,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "~"
+		(property "Datasheet" "G2RL-1-E DC5"
 			(at 153.67 73.66 0)
 			(effects
 				(font
@@ -7009,6 +7009,15 @@
 			)
 		)
 		(property "Description" "Relay SPDT, monostable, EN50005"
+			(at 153.67 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey" "Z2824-ND"
 			(at 153.67 73.66 0)
 			(effects
 				(font
@@ -7132,7 +7141,7 @@
 				)
 			)
 		)
-		(property "Value" "Fuse"
+		(property "Value" "Thermal fuse"
 			(at 163.83 29.21 90)
 			(effects
 				(font
@@ -7158,7 +7167,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Fuse"
+		(property "Description" "SF70E 70'C thermal fuse"
 			(at 163.83 33.02 0)
 			(effects
 				(font
@@ -7911,6 +7920,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 210.82 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" " 609-3937-ND"
 			(at 210.82 43.18 0)
 			(effects
 				(font
@@ -8721,6 +8739,15 @@
 				(hide yes)
 			)
 		)
+		(property "Digikey PN" "36-3517-ND"
+			(at 147.32 33.02 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "a1d8bf5c-1d91-48fa-9de6-cbf73f581b36")
 		)
@@ -9007,6 +9034,97 @@
 			(project "door-remote"
 				(path "/c5633262-a594-4eb9-95d0-dd6b0b316893"
 					(reference "D3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x03")
+		(at 210.82 66.04 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "97dd3815-36cd-48ab-b99e-e7390305dda8")
+		(property "Reference" "J9"
+			(at 213.36 64.7699 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "Conn_01x03"
+			(at 213.36 67.3099 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TerminalBlock_MetzConnect:TerminalBlock_MetzConnect_Type073_RT02603HBLU_1x03_P5.08mm_Horizontal"
+			(at 210.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 210.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 210.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" ""
+			(at 210.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Field6" "609-3937-ND"
+			(at 210.82 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b66bcccc-3d61-426d-9fd2-3d9b02cd9949")
+		)
+		(pin "2"
+			(uuid "f47c385e-54ff-41d0-b63e-3758620a1051")
+		)
+		(pin "3"
+			(uuid "9e5067d8-8519-4c23-8c32-e9dd98183d7e")
+		)
+		(instances
+			(project "controller"
+				(path "/c5633262-a594-4eb9-95d0-dd6b0b316893"
+					(reference "J9")
 					(unit 1)
 				)
 			)
@@ -9301,6 +9419,15 @@
 			)
 		)
 		(property "Sim.Library" "${KICAD9_SYMBOL_DIR}/Simulation_SPICE.sp"
+			(at 154.94 36.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Digikey PN" "118-MOV-07D301KTR"
 			(at 154.94 36.83 0)
 			(effects
 				(font
