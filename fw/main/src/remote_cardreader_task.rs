@@ -9,20 +9,9 @@ use postcard::from_bytes_cobs;
 
 use serde::{Deserialize, Serialize};
 
-use crate::main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent};
+use uart_protocol::RemoteMessage;
 
-//The card reader messages we send
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
-enum Message {
-    //RFID cards have different length UIDs
-    SingleUid([u8; 4]),
-    DoubleUid([u8; 7]),
-    TripleUid([u8; 10]),
-    ReadError,
-    ReaderFault,
-    JustReset,
-    KeepAlive,
-}
+use crate::main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent};
 
 #[derive(Debug, Format)]
 pub enum RemoteError {
@@ -36,31 +25,31 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
     loop {
         match read_message(&mut uart).await {
             Ok(msg) => match msg {
-                Message::SingleUid(data) => {
+                RemoteMessage::SingleUid(data) => {
                     debug!("Single UID card - {}", data);
                     CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
-                Message::DoubleUid(data) => {
+                RemoteMessage::DoubleUid(data) => {
                     debug!("Double UID card - {}", data);
                     CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
-                Message::TripleUid(data) => {
+                RemoteMessage::TripleUid(data) => {
                     debug!("Triple UID card - {}", data);
                     CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
                 }
-                Message::ReadError => {
+                RemoteMessage::ReadError => {
                     error!("Card read error");
                 }
-                Message::ReaderFault => {
+                RemoteMessage::ReaderFault => {
                     error!("Reader fault");
                 }
-                Message::JustReset => {
+                RemoteMessage::JustReset => {
                     //NB Happens at:
                     //initial power-on
                     //watchdog reset (eg if card reader hangs)
                     warn!("Reader just reset");
                 }
-                Message::KeepAlive => {
+                RemoteMessage::KeepAlive => {
                     debug!("Reader keepalive received");
                 }
             },
@@ -71,7 +60,7 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
     }
 }
 
-async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, RemoteError> {
+async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<RemoteMessage, RemoteError> {
     let mut buf = [0x00u8; 16];
 
     for index in 0..buf.len() {
@@ -79,7 +68,7 @@ async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<Message, 
             if buf[index] == 0x00u8 {
                 //Message complete, cobs ensures 0x00 will never be part of message, just end marker
                 //Decode message using from_bytes_cobs from Postcard
-                let res: Result<Message, postcard::Error> = from_bytes_cobs(&mut buf[0..index]);
+                let res: Result<RemoteMessage, postcard::Error> = from_bytes_cobs(&mut buf[0..index]);
                 match res {
                     Ok(message) => return Ok(message),
                     Err(_e) => return Err(RemoteError::PostcardError),
