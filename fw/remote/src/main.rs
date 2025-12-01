@@ -22,22 +22,11 @@ use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 use postcard::to_vec_cobs;
 use serde::{Serialize, Deserialize};
 
+use uart_protocol::RemoteMessage;
+
 bind_interrupts!(struct Irqs {
     UART0_IRQ => InterruptHandler<UART0>;
 });
-
-//The card reader messages we send to the main unit
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
-enum Message {
-    //RFID cards have different length UIDs
-    SingleUid([u8;4]),
-    DoubleUid([u8;7]),
-    TripleUid([u8;10]),
-    ReadError,
-    ReaderFault,
-    JustReset,
-    KeepAlive,
-}
 
 const WATCHDOG_TIMER_SECS:u64 = 2;
 const WATCHDOG_FEED_TIMER_MS:u64 = 250;
@@ -72,7 +61,7 @@ async fn main(spawner: Spawner) -> ! {
 
     //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-origi
     debug!("Sending JustReset to controller");
-    let vec: Vec<u8,16> = to_vec_cobs(&Message::JustReset).unwrap();
+    let vec: Vec<u8,16> = to_vec_cobs(&RemoteMessage::JustReset).unwrap();
     let _ = uart.write(&vec).await;
 
     //Init SPI0 for talking to the card reader
@@ -110,24 +99,24 @@ async fn main(spawner: Spawner) -> ! {
                                     debug!("Single UID card read");
                                     let mut buf = [0x00;4];
                                     buf.copy_from_slice(&inner.as_bytes()[..4]);
-                                    Message::SingleUid(buf)
+                                    RemoteMessage::SingleUid(buf)
                                 },
                                 Ok(ref _uid @ Uid::Double(ref inner)) => {
                                     debug!("Double UID card read");
                                     let mut buf = [0x00;7];
                                     buf.copy_from_slice(&inner.as_bytes()[..7]);
-                                    Message::DoubleUid(buf)
+                                    RemoteMessage::DoubleUid(buf)
                                 },
                                 Ok(ref _uid @ Uid::Triple(ref inner)) => {
                                     debug!("Triple UID card read");
 
                                     let mut buf = [0x00;10];
                                     buf.copy_from_slice(&inner.as_bytes()[..10]);
-                                    Message::TripleUid(buf)
+                                    RemoteMessage::TripleUid(buf)
                                 },
                                 Err(_e) => {
                                     error!("MFRC select error");
-                                    Message::ReadError
+                                    RemoteMessage::ReadError
                                 },
                             };
                             let vec: Vec<u8,16> = to_vec_cobs(&message).unwrap();
@@ -146,7 +135,7 @@ async fn main(spawner: Spawner) -> ! {
                             last_sent_ok_message_counter += 1;
                             if last_sent_ok_message_counter == 10 {
                                 //Send OK message to main unit so it knows we're still alive
-                                let vec: Vec<u8,16> = to_vec_cobs(&Message::KeepAlive).unwrap();
+                                let vec: Vec<u8,16> = to_vec_cobs(&RemoteMessage::KeepAlive).unwrap();
                                 let _ = uart.write(&vec).await;
                                 last_sent_ok_message_counter = 0;
                             }
@@ -155,7 +144,7 @@ async fn main(spawner: Spawner) -> ! {
                 },
                 Err(_e) => {
                     error!("Device init failed, waiting to retry");
-                    let vec: Vec<u8,16> = to_vec_cobs(&Message::ReaderFault).unwrap();
+                    let vec: Vec<u8,16> = to_vec_cobs(&RemoteMessage::ReaderFault).unwrap();
                     let _ = uart.write(&vec).await;
                     Timer::after_millis(500).await;
                 }

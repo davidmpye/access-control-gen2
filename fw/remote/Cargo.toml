@@ -45,6 +45,7 @@ heapless = "0.7.0"
 serde = { version = "1.0.219", default-features = false }
 mfrc522 = "0.8.0"
 rp-pac = { version = "7.0.0", features = ["cortex-m-rt", "defmt", "rp2040", "rt"] }
+uart_protocol = { version = "0.1.0", path = "../uart_protocol" }
 
 [profile.release]
 debug = 2
