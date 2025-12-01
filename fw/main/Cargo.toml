@@ -64,6 +64,7 @@ embedded-hal = "1.0.0"
 embedded-hal-nb = "1.0.0"
 w25q32jv = "0.5.1"
 ekv = "1.0.0"
+uart_protocol = { version = "0.1.0", path = "../uart_protocol" }
 
 [profile.release]
 debug = 2
