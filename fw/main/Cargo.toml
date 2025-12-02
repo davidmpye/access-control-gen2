@@ -65,6 +65,7 @@ embedded-hal-nb = "1.0.0"
 w25q32jv = "0.5.1"
 ekv = "1.0.0"
 uart_protocol = { version = "0.1.0", path = "../uart_protocol" }
+embassy-futures = "0.1.2"
 
 [profile.release]
 debug = 2
