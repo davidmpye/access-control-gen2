@@ -33,6 +33,7 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
     loop {
         match select(read_message(&mut uart_rx), MAIN_MESSAGE_SIGNAL.wait()).await {
             Either::First(msg) => {
+                //Received message from remote cardreader
                 match msg {
                     Ok(msg) => match msg {
                         RemoteMessage::SingleUid(data) => {
@@ -69,7 +70,7 @@ pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
                 }
             },
             Either::Second(msg) => {
-                //Serialise and send this to the remote device
+                //Received message to send to remote device to update status LEDs
                 debug!("Sending message to remote device");
                 let vec: Vec<u8,16> = to_vec_cobs(&msg).unwrap();
                 let _ = uart_tx.write(&vec).await;

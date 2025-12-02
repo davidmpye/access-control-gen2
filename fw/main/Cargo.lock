@@ -17,6 +17,7 @@ dependencies = [
  "defmt-rtt",
  "ekv",
  "embassy-executor",
+ "embassy-futures",
  "embassy-net",
  "embassy-rp",
  "embassy-sync 0.6.2",
