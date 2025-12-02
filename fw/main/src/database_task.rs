@@ -45,13 +45,6 @@ pub(crate) enum UpdateError {
     RemoteServerError(reqwless::response::StatusCode), //Http error from remote server (not 200!)
     InvalidDbVersion, //DBVersion should (currently) be a 16 byte MD5 hash
 }
-
-impl From<reqwless::Error> for UpdateError {
-    fn from(_err: reqwless::Error) -> Self {
-        Self::ConnectionError
-    }
-}
-
 pub(crate) enum DatabaseTaskCommand {
     CheckMD5Hash([u8; 32]),
     ForceUpdate,
@@ -331,7 +324,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 )
                 .await
                 {
-                    Ok(e) => e?,
+                    Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
                     Err(_) => {
                         return Err(UpdateError::Timeout);
                     }
@@ -344,7 +337,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 )
                 .await
                 {
-                    Ok(e) => e?,
+                    Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
                     Err(_) => {
                         return Err(UpdateError::Timeout);
                     }
@@ -452,7 +445,7 @@ async fn get_remote_db_version(
         )
         .await
         {
-            Ok(e) => e?,
+            Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
             Err(_) => {
                 return Err(UpdateError::Timeout);
             }
@@ -464,7 +457,7 @@ async fn get_remote_db_version(
     )
     .await
     {
-        Ok(e) => e?,
+        Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
         Err(_) => {
             return Err(UpdateError::Timeout);
         }
@@ -479,7 +472,7 @@ async fn get_remote_db_version(
     //Read 100 bytes
     let mut buf = [0x00u8; 100];
     let mut reader = response.body().reader();
-    let len = reader.read(&mut buf).await?;
+    let len = reader.read(&mut buf).await.map_err(|_|UpdateError::ConnectionError)?;
 
     if len != 24 {
         error!("Wrong DBVersion length - should be 24 bytes, got {}", len);
