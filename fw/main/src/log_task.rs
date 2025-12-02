@@ -29,9 +29,10 @@ pub(crate) enum LogEvent {
 }
 
 //The queue can hold 32 events awaiting logging
-pub static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN> =
+pub (crate) static LOG_EVENT_QUEUE: Channel<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN> =
     Channel::<ThreadModeRawMutex, LogEvent, MAX_QUEUE_LEN>::new();
 
+#[derive(Debug, Format)]
 pub enum LogError {
     WifiNotConnected,
     ConnectionError, //Reqwless unable to connect
@@ -44,19 +45,6 @@ impl From<reqwless::Error> for LogError {
         Self::ConnectionError
     }
 }
-
-impl Format for LogError {
-    fn format(&self, fmt: Formatter) {
-        let str = match self {
-            LogError::WifiNotConnected => "Wifi not connected",
-            LogError::ConnectionError => "Connection error",
-            LogError::Timeout => "Timeout",
-            LogError::RemoteServerError(_http_status) => "HTTP error",
-        };
-        write!(fmt, "{}", str);
-    }
-}
-
 pub struct LogTaskRunner {
     stack: Stack<'static>,
 }
