@@ -40,11 +40,6 @@ pub enum LogError {
     RemoteServerError(reqwless::response::StatusCode), //Http error from remote server (not 200!)
 }
 
-impl From<reqwless::Error> for LogError {
-    fn from(_err: reqwless::Error) -> Self {
-        Self::ConnectionError
-    }
-}
 pub struct LogTaskRunner {
     stack: Stack<'static>,
 }
@@ -141,7 +136,7 @@ impl LogTaskRunner {
         let request = match http_client.request(Method::POST, &url).with_timeout(CONFIG.http_timeout)
         .await
         {
-            Ok(e) => e?,
+            Ok(e) => e.map_err(|_|LogError::ConnectionError)?,
             Err(_timeout) => {
                 return Err(LogError::Timeout);
             }
