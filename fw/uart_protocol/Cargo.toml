@@ -2,6 +2,11 @@
 name = "uart_protocol"
 version = "0.1.0"
 edition = "2021"
+authors = [ "David Pye <davidmpye@gmail.com>" ]
+description = "UART over RS485 protocol defintions for Makerspace Access Control System"
+license = "MIT OR Apache-2.0"
+categories = [ "embedded", "no-std" ]
+
 
 [dependencies]
 postcard = "1.1.3"
