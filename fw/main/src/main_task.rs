@@ -8,6 +8,7 @@ use defmt::*;
 use crate::database_task::{DatabaseTaskCommand, DatabaseTaskResponse};
 use crate::database_task::{DATABASE_COMMAND_SIGNAL, DATABASE_RESPONSE_SIGNAL};
 
+use crate::remote_cardreader_task::MAIN_MESSAGE_SIGNAL;
 use crate::{config::LatchMode, CONFIG};
 
 use crate::{LogEvent, LOG_EVENT_QUEUE};
@@ -71,14 +72,19 @@ pub async fn main_task(
                                     allowed_led.set_high();
                                     latch_state = LatchState::Enabled(hash_buf);
                                     queue_log_message(LogEvent::ACTIVATED(hash_buf));
+                                    //If we have a remote cardreader, it will set LED to green
+                                    MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessGranted);
                                 } else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
+                                    //Remote cardreader LED to red
+                                    MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessDenied);
                                     Timer::after_secs(2).await;
                                     denied_led.set_low();
                                     queue_log_message(LogEvent::LOGINFAIL(hash_buf));
+                                    //Turn off remote cardreader LED (if present)
+                                    MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
                                 }
-                                //Todo - if we are using a remote cardreader, could we send a message back to it allowing it to illuminate a status LED too?
                             }
                             LatchState::Enabled(hash) => {
                                 //Doesn't matter if card is valid, this counts as a sign out
@@ -95,16 +101,20 @@ pub async fn main_task(
                             info!("Card valid, latching for {} seconds", time.as_secs());
                             relay_pin.set_high();
                             allowed_led.set_high();
+                            MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessGranted);
                             Timer::after(time).await;
                             relay_pin.set_low();
                             allowed_led.set_low();
+                            MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
                             debug!("Deactivated");
                             queue_log_message(LogEvent::ACTIVATED(hash_buf));
                         } else {
                             info!("Card invalid, access denied");
                             denied_led.set_high();
+                            MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessDenied);
                             Timer::after_secs(2).await;
                             denied_led.set_low();
+                            MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
                             queue_log_message(LogEvent::LOGINFAIL(hash_buf));
                         }
                     }
