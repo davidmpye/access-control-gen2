@@ -27,7 +27,7 @@ pub enum RemoteError {
 pub(crate) static MAIN_MESSAGE_SIGNAL: Signal<ThreadModeRawMutex, MainMessage> = Signal::new();
 
 #[embassy_executor::task]
-pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
+pub async fn remote_cardreader_task(uart: Uart<'static, UART0, Async>) {
     let (mut uart_tx, mut uart_rx) = uart.split();
 
     loop {
