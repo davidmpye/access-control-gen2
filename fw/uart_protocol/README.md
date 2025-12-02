@@ -2,7 +2,10 @@
 
 ## Purpose
 
-This crate defines an enum which is the message sent between the remote card reader and the main unit.
+This crate defines the messaging protocol used between the main access control unit and a remote card reader unit (UART over RS485).
+RS485 is used to try to avoid problems previously encountered with the MFRC522 misbehaving and refusing to read cards (likely due to misusing SPI bus over a number of metres!)
+
+### RemoteMessage (from remote to main unit):
 
 These are as follows:
 
@@ -35,3 +38,18 @@ Sends on powerup (or if the rp2040 is reset by the watchdog - usually because th
 * KeepAlive,
 
 Routine keepalive message - nothing to see here
+
+### MainMessage (from main unit to remote)
+
+* AccessGranted,  
+
+Put green LED on (if fitted) to indicate successful device/door activation
+
+* AccessDenied,  
+
+Put red LED on (if fitted) to indicate unsuccessful device/door activation
+
+* AwaitingCard,  
+
+Quiescent state (usually, both LEDs off)
+
