@@ -24,7 +24,7 @@ pub enum RemoteError {
 }
 
 //Signal here to send a MainMessage to the remote unit
-pub static MAIN_MESSAGE_SIGNAL: Signal<ThreadModeRawMutex, MainMessage> = Signal::new();
+pub(crate) static MAIN_MESSAGE_SIGNAL: Signal<ThreadModeRawMutex, MainMessage> = Signal::new();
 
 #[embassy_executor::task]
 pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
