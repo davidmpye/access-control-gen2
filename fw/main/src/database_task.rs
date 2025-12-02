@@ -37,7 +37,8 @@ struct DbFlash<T: NorFlash + ReadNorFlash> {
     flash: T,
 }
 
-pub enum UpdateError {
+#[derive(Debug, Format)]
+pub(crate) enum UpdateError {
     WifiNotConnected,
     ConnectionError, //Reqwless unable to connect
     Timeout,
@@ -51,25 +52,12 @@ impl From<reqwless::Error> for UpdateError {
     }
 }
 
-impl Format for UpdateError {    
-    fn format(&self, fmt: Formatter) {
-        let str = match self {
-            UpdateError::WifiNotConnected => "Wifi not connected",
-            UpdateError::ConnectionError => "Connection error",
-            UpdateError::Timeout => "Timeout",
-            UpdateError::RemoteServerError(_http_status) => "HTTP error",
-            UpdateError::InvalidDbVersion => "Invalid DB version",
-        };
-        write!(fmt, "{}", str);
-    }
-}
-
-pub enum DatabaseTaskCommand {
+pub(crate) enum DatabaseTaskCommand {
     CheckMD5Hash([u8; 32]),
     ForceUpdate,
 }
 
-pub enum DatabaseTaskResponse {
+pub(crate) enum DatabaseTaskResponse {
     Found,
     NotFound,
     Invalid,
@@ -77,8 +65,8 @@ pub enum DatabaseTaskResponse {
     UpdateOk,
 }
 
-pub static DATABASE_COMMAND_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskCommand> = Signal::new();
-pub static DATABASE_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskResponse> =
+pub (crate) static DATABASE_COMMAND_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskCommand> = Signal::new();
+pub (crate) static DATABASE_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskResponse> =
     Signal::new();
 
 //This is an EKV<->NorFlash+ReadNorFlash shim
