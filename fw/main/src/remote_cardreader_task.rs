@@ -1,17 +1,20 @@
-use embassy_rp::peripherals::UART0;
-use embassy_rp::uart::{
-    Async, Uart,
-};
-
 use defmt::*;
 
-use postcard::from_bytes_cobs;
+use embassy_futures::select::{Either,select};
+use embassy_rp::peripherals::UART0;
+use embassy_rp::uart::{
+    Async, Uart, UartRx, UartTx
+};
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
+use embassy_sync::signal::Signal;
 
+use heapless::Vec;
+use postcard::{to_vec_cobs, from_bytes_cobs};
 use serde::{Deserialize, Serialize};
 
-use uart_protocol::RemoteMessage;
-
+use uart_protocol::{MainMessage,RemoteMessage};
 use crate::main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent};
+
 
 #[derive(Debug, Format)]
 pub enum RemoteError {
@@ -20,47 +23,62 @@ pub enum RemoteError {
     PostcardError,    //Unable to decode message using postcard - byte corruption?
 }
 
+//Signal here to send a MainMessage to the remote unit
+pub static MAIN_MESSAGE_SIGNAL: Signal<ThreadModeRawMutex, MainMessage> = Signal::new();
+
 #[embassy_executor::task]
 pub async fn remote_cardreader_task(mut uart: Uart<'static, UART0, Async>) {
+    let (mut uart_tx, mut uart_rx) = uart.split();
+
     loop {
-        match read_message(&mut uart).await {
-            Ok(msg) => match msg {
-                RemoteMessage::SingleUid(data) => {
-                    debug!("Single UID card - {}", data);
-                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
-                }
-                RemoteMessage::DoubleUid(data) => {
-                    debug!("Double UID card - {}", data);
-                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
-                }
-                RemoteMessage::TripleUid(data) => {
-                    debug!("Triple UID card - {}", data);
-                    CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
-                }
-                RemoteMessage::ReadError => {
-                    error!("Card read error");
-                }
-                RemoteMessage::ReaderFault => {
-                    error!("Reader fault");
-                }
-                RemoteMessage::JustReset => {
-                    //NB Happens at:
-                    //initial power-on
-                    //watchdog reset (eg if card reader hangs)
-                    warn!("Reader just reset");
-                }
-                RemoteMessage::KeepAlive => {
-                    debug!("Reader keepalive received");
+        match select(read_message(&mut uart_rx), MAIN_MESSAGE_SIGNAL.wait()).await {
+            Either::First(msg) => {
+                match msg {
+                    Ok(msg) => match msg {
+                        RemoteMessage::SingleUid(data) => {
+                            debug!("Single UID card - {}", data);
+                            CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
+                        }
+                        RemoteMessage::DoubleUid(data) => {
+                            debug!("Double UID card - {}", data);
+                            CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
+                        }
+                        RemoteMessage::TripleUid(data) => {
+                            debug!("Triple UID card - {}", data);
+                            CARDREADER_EVENT_SIGNAL.signal(CardReaderEvent::CardMD5(md5::compute(data)));
+                        }
+                        RemoteMessage::ReadError => {
+                            error!("Card read error");
+                        }
+                        RemoteMessage::ReaderFault => {
+                            error!("Reader fault");
+                        }
+                        RemoteMessage::JustReset => {
+                            //NB Happens at:
+                            //initial power-on
+                            //watchdog reset (eg if card reader hangs)
+                            warn!("Reader just reset");
+                        }
+                        RemoteMessage::KeepAlive => {
+                            debug!("Reader keepalive received");
+                        }
+                    },
+                    Err(e) => {
+                        error!("Remote error received - {}", e);
+                    }
                 }
             },
-            Err(e) => {
-                error!("Remote error received - {}", e);
-            }
-        }
+            Either::Second(msg) => {
+                //Serialise and send this to the remote device
+                debug!("Sending message to remote device");
+                let vec: Vec<u8,16> = to_vec_cobs(&msg).unwrap();
+                let _ = uart_tx.write(&vec).await;
+            },
+        }      
     }
 }
 
-async fn read_message<'d>(uart: &mut Uart<'d, UART0, Async>) -> Result<RemoteMessage, RemoteError> {
+async fn read_message<'d>(uart: &mut UartRx<'d, UART0, Async>) -> Result<RemoteMessage, RemoteError> {
     let mut buf = [0x00u8; 16];
 
     for index in 0..buf.len() {
