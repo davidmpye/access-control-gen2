@@ -56,14 +56,14 @@ async fn led_task(mut uart_rx: UartRx<'static, UART0, Async>, mut red_led: Outpu
             Ok(message) => {
                 match message {
                     AccessGranted => {
-                        green_led.set_high();
+                        green_led.set_low();
                     },
                     AccessDenied => {
-                        red_led.set_high();
+                        red_led.set_low();
                     },
                     AwaitingCard => {
-                        green_led.set_low();
-                        red_led.set_low();
+                        green_led.set_high();
+                        red_led.set_high();
                     },
                 }
             },
@@ -119,8 +119,15 @@ async fn main(spawner: Spawner) -> ! {
 
     let (mut uart_tx, uart_rx) = uart.split();
 
+    //Leds on, 1 sec flash at power up
+    let mut green_led = Output::new(p.PIN_3, Level::Low);
+    let mut red_led = Output::new(p.PIN_2, Level::Low);
+    Timer::after_millis(500).await;
+    green_led.set_high();
+    Timer::after_millis(500).await;
+    red_led.set_high();
     //Spawn the status LED task, which owns the two GPIO ACC pins and the Rx half of the UART
-    spawner.must_spawn(led_task(uart_rx, Output::new(p.PIN_2, Level::Low), Output::new(p.PIN_3, Level::Low)));
+    spawner.must_spawn(led_task(uart_rx, red_led, green_led));
     
     //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-origi
     debug!("Sending JustReset to controller");
