@@ -166,6 +166,7 @@ async fn main(spawner: Spawner) {
     //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
     if cfg!(not(feature = "remote-cardreader")) {
         info!("Local cardreader mode selected");
+        info!("NB - if no cardreader, this will hang and reboot repeatedly (by watchdog)");
         //Local task - will poll SPI cardreader over local bus
         let (sck, mosi, miso, cs) = (p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
         let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
