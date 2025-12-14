@@ -12671,7 +12671,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Access Control Gen2\n240V Controller\nV1.2"
+	(gr_text "Access Control Gen2\n240V Controller\nV1.3"
 		(at 65.8 62.6 0)
 		(layer "F.SilkS")
 		(uuid "7fca4636-3310-43c3-9383-90badb528293")
