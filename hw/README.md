@@ -6,6 +6,8 @@ Contains two 3D printable parts:
 
 * RFID pillar - need to print two of these, and requires 4 M3 threaded inserts. Used to affix RFID reader securely to PCB.
 
+* Insulator washer - needed for LowVolt model - two of these to go under the bolt heads to prevent them scratching/shorting the tracks on the PCB
+
 For the housing, we used IP55 Junction Boxes (double) from [ToolStation](https://www.toolstation.com/ip55-junction-box/p60297)
 
 
