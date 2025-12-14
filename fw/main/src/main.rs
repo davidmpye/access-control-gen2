@@ -198,8 +198,8 @@ async fn main(spawner: Spawner) {
     }
 
     //Spawn the main task
-    let allowed = Output::new(p.PIN_7, Level::Low);
-    let denied = Output::new(p.PIN_8, Level::Low);
+    let allowed = Output::new(p.PIN_8, Level::Low);
+    let denied = Output::new(p.PIN_7, Level::Low);
     let relay_pin = Output::new(p.PIN_15, Level::Low);
     spawner.must_spawn(main_task(relay_pin, allowed, denied));
 
