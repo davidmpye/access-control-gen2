@@ -74,6 +74,9 @@ pub async fn main_task(
                                     queue_log_message(LogEvent::ACTIVATED(hash_buf));
                                     //If we have a remote cardreader, it will set LED to green
                                     MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessGranted);
+                                    //Wait 2 seconds before processing another card read otherwise we sign out again
+                                    Timer::after_secs(2).await;
+
                                 } else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
