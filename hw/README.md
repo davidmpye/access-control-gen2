@@ -1,6 +1,6 @@
 # Hardware 
 
-Contains two 3D printable parts:
+Contains three 3D printable parts:
 
 * Mounting bracket - PLA, 30% infil.  Requires 8 M3 brass threaded inserts, four to mount PCB to bracket, and 4 to mount the bracket to the inside of a box.
 
