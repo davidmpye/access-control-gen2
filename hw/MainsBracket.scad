@@ -3,6 +3,9 @@ $fn=50;
 base_thickness = 7.5;
 pillar_height = 35;
 
+pillar_dia = 10;
+piller_inner_hole_dia = 4;
+
 module bracket1 () {
 
     pillar_1_loc = [ 65.65/2, 117.05/2,0];
@@ -14,13 +17,13 @@ module bracket1 () {
         union() {
             //Add on the pillars
             translate([25,117.05/2,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
+                cylinder(h=pillar_height,d=pillar_dia);
+                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
             
             translate([-25,117.05/2,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
+                cylinder(h=pillar_height,d=pillar_dia);
+                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
             
             hull() {
@@ -56,18 +59,17 @@ module bracket2() {
         union() {
             //Add on the pillars
             translate([25,117.05/2 - 105,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
+                cylinder(h=pillar_height,d=pillar_dia);
+                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
             
             translate([-25,117.05/2 - 105,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
+                cylinder(h=pillar_height,d=pillar_dia);
+                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
             
             hull() {
-                
-                //point to merge the bracket in
+                //point to merge the and pillars together
                 translate([0,15,0]) translate(pillar_5_loc) cylinder(d=8,h=base_thickness);
                 translate([0,15,0]) translate(pillar_6_loc) cylinder(d=8,h=base_thickness);
 
