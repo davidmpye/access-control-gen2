@@ -2,9 +2,6 @@ use embassy_time::{Delay, Duration, Timer};
 
 use defmt::*;
 
-use embedded_hal::digital::OutputPin;
-use embedded_hal::spi::SpiDevice;
-
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 
 use crate::{Spi0Resources, main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent}};
