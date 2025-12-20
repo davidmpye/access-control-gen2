@@ -159,7 +159,6 @@ async fn main(spawner: Spawner) {
     //Spawn network task
     unwrap!(spawner.spawn(net_task(runner)));
 
-    //Set up channel to receive card hash
     //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
     if cfg!(not(feature = "remote-cardreader")) {
         info!("Local cardreader mode selected");

@@ -27,18 +27,17 @@ enum LatchState {
 }
 
 #[embassy_executor::task]
-pub async fn main_task(leds: LedResources, relay: RelayResources) -> ! {
-    //The task needs ownership of Red LED, Green LED, MOSFET gate pin
-    
+pub async fn main_task(leds: LedResources, relay: RelayResources) -> ! {    
     //Receives message of new RFID read via signal, passes to database task.
     //Receives message from database task - card allowed, card denied
     //Activates appropriate LED +- FET
     //Sends message to the log task queue so it can update the backend
-    let mut latch_state = LatchState::Disabled;
 
     let mut allowed_led = Output::new(leds.green_led, Level::Low);
     let mut denied_led = Output::new(leds.red_led, Level::Low);
     let mut relay_pin = Output::new(relay.relay_pin, Level::Low);
+
+    let mut latch_state = LatchState::Disabled;
 
     loop {
         //Await a message from the card reader handler
