@@ -44,8 +44,8 @@ use config::CONFIG;
 
 assign_resources! {
     leds: LedResources {
-        red_led: PIN_8,
-        green_led: PIN_7,
+        red_led: PIN_7,
+        green_led: PIN_8,
     },
     relay: RelayResources {
         relay_pin: PIN_15,
