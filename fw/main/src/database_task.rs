@@ -13,8 +13,7 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Instant, Timer};
 
-
-use defmt::{Format, write, *};
+use defmt::{write, Format, *};
 
 use ekv::flash::{self, PageID};
 use ekv::{config, Database};
@@ -66,8 +65,9 @@ pub(crate) enum DatabaseTaskResponse {
     UpdateOk,
 }
 
-pub (crate) static DATABASE_COMMAND_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskCommand> = Signal::new();
-pub (crate) static DATABASE_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskResponse> =
+pub(crate) static DATABASE_COMMAND_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskCommand> =
+    Signal::new();
+pub(crate) static DATABASE_RESPONSE_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskResponse> =
     Signal::new();
 
 //This is an EKV<->NorFlash+ReadNorFlash shim
@@ -111,115 +111,115 @@ impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
 }
 
 #[embassy_executor::task]
-pub async fn database_task(r: FlashResources, size: usize, start_addr: usize, stack: Stack<'static>) {
+pub async fn database_task(
+    r: FlashResources,
+    size: usize,
+    start_addr: usize,
+    stack: Stack<'static>,
+) {
+    //Initialise the SPI1 bus
+    let spi1: Spi<'_, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking> =
+        Spi::new_blocking(r.spi, r.sck, r.mosi, r.miso, SpiConfig::default());
 
+    //Initialise the flash device
+    let flash_wp = Output::new(r.wp, Level::Low); //WP is ACTIVE LOW - start with flash WP set
+    let flash_hold = Output::new(r.hold, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
+    let flash_cs = Output::new(r.cs, Level::High); //SPI flash CS pin
+    let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
+    let mut flash =
+        W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");
 
-        //Initialise the SPI1 bus
-        let spi1: Spi<'_, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking> =
-            Spi::new_blocking(r.spi, r.sck, r.mosi, r.miso, SpiConfig::default());
+    info!(
+        "SPI flash (W25Q32) initialised - device id {}",
+        flash.device_id().expect("Unable to read flash ID")
+    );
+    //Wrap it into the DBFlash
+    let flash = DbFlash {
+        start: start_addr,
+        flash: flash,
+    };
 
-        //Initialise the flash device
-        let flash_wp = Output::new(r.wp, Level::Low); //WP is ACTIVE LOW - start with flash WP set
-        let flash_hold = Output::new(r.hold, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
-        let flash_cs = Output::new(r.cs, Level::High); //SPI flash CS pin
-        let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
-        let mut flash = W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");
+    //Initialise and mount the EKV database
+    let db = Database::<_, NoopRawMutex>::new(flash, ekv::Config::default());
+    if db.mount().await.is_err() {
+        info!("Formatting...");
+        db.format().await.expect("Flash format failure");
+        //write version key post format
+        let mut wtx = db.write_transaction().await;
+        wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
+        wtx.commit().await.unwrap();
+    } else {
+        let mut buf = [0u8; 32];
+        let rtx = db.read_transaction().await;
+        let key_read = rtx
+            .read(b"__DB_VERSION__", &mut buf)
+            .await
+            .map(|n| &buf[..n]);
+        drop(rtx); //to allow write below, if needed.
 
-        info!(
-            "SPI flash (W25Q32) initialised - device id {}",
-            flash.device_id().expect("Unable to read flash ID")
-        );
-        //Wrap it into the DBFlash
-        let flash = DbFlash {
-            start: start_addr,
-            flash: flash,
+        let current_db_version = match key_read {
+            Ok(val) => val,
+            Err(_e) => {
+                error!("DB version tag missing from flash - writing tag as 0x00 to force update");
+                let mut wtx = db.write_transaction().await;
+                wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
+                wtx.commit().await.unwrap();
+                &[0x00]
+            }
         };
 
-        //Initialise and mount the EKV database
-        let db = Database::<_, NoopRawMutex>::new(flash, ekv::Config::default());
-        if db.mount().await.is_err() {
-            info!("Formatting...");
-            db.format().await.expect("Flash format failure");
-            //write version key post format
-            let mut wtx = db.write_transaction().await;
-            wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
-            wtx.commit().await.unwrap();
-        } else {
-            let mut buf = [0u8; 32];
-            let rtx = db.read_transaction().await;
-            let key_read = rtx
-                .read(b"__DB_VERSION__", &mut buf)
-                .await
-                .map(|n| &buf[..n]);
-            drop(rtx); //to allow write below, if needed.
+        info!(
+            "Local database version: {}, containing {} RFID hashes",
+            current_db_version,
+            db_count(&db).await - 1
+        ); //-1 to account for the __DB_VERSION__ key
+    }
 
-            let current_db_version = match key_read {
-                Ok(val) => val,
-                Err(_e) => {
-                    error!(
-                        "DB version tag missing from flash - writing tag as 0x00 to force update"
-                    );
-                    let mut wtx = db.write_transaction().await;
-                    wtx.write(b"__DB_VERSION__", b"0x00").await.unwrap();
-                    wtx.commit().await.unwrap();
-                    &[0x00]
+    let mut last_sync_attempt_time = Instant::MIN;
+
+    loop {
+        //Sync 60 seconds after startup (to let wifi come up) and at specified intervals
+        if stack.is_config_up()
+            && ((last_sync_attempt_time == Instant::MIN
+                && Instant::now() > Instant::MIN + Duration::from_secs(60))
+                || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency)
+        {
+            last_sync_attempt_time = Instant::now();
+
+            match sync_database(&db, stack).await {
+                Ok(_) => {
+                    info!("Database sync successful");
                 }
-            };
-
-
-            info!("Local database version: {}, containing {} RFID hashes", current_db_version, db_count(&db).await - 1); //-1 to account for the __DB_VERSION__ key
-        }
-
-        let mut last_sync_attempt_time = Instant::MIN;
-
-        loop {
-            //Sync 60 seconds after startup (to let wifi come up) and at specified intervals
-            if stack.is_config_up() && 
-                (
-                    (last_sync_attempt_time == Instant::MIN && Instant::now() > Instant::MIN + Duration::from_secs(60))
-                    || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency
-                )
-            {
-                last_sync_attempt_time = Instant::now();
-                
-                match sync_database(&db, stack).await {
-                    Ok(_) => {
-                        info!("Database sync successful");
-                    },
-                    Err(err) => {
-                        error!("Database sync failed - {}", err);
-                    },
-                }           
+                Err(err) => {
+                    error!("Database sync failed - {}", err);
+                }
             }
-            debug!("Now awaiting database command signal");
-            //Purpose of timeout is to give us an opportunity to check, every 60s, if we need to do a DB update
-            match embassy_time::with_timeout(
-                Duration::from_secs(60),
-                DATABASE_COMMAND_SIGNAL.wait(),
-            )
+        }
+        debug!("Now awaiting database command signal");
+        //Purpose of timeout is to give us an opportunity to check, every 60s, if we need to do a DB update
+        match embassy_time::with_timeout(Duration::from_secs(60), DATABASE_COMMAND_SIGNAL.wait())
             .await
-            {
-                Ok(cmd) => match cmd {
-                    DatabaseTaskCommand::CheckMD5Hash(hash) => match db_lookup(&db, hash).await {
-                        Some(_) => {
-                            DATABASE_RESPONSE_SIGNAL.signal(DatabaseTaskResponse::Found);
-                        }
-                        None => {
-                            DATABASE_RESPONSE_SIGNAL.signal(DatabaseTaskResponse::NotFound);
-                        }
-                    },
-                    DatabaseTaskCommand::ForceUpdate => {
-                        info!("Database force-update checking");
-                        defmt::todo!("Force update not implemented");
+        {
+            Ok(cmd) => match cmd {
+                DatabaseTaskCommand::CheckMD5Hash(hash) => match db_lookup(&db, hash).await {
+                    Some(_) => {
+                        DATABASE_RESPONSE_SIGNAL.signal(DatabaseTaskResponse::Found);
+                    }
+                    None => {
+                        DATABASE_RESPONSE_SIGNAL.signal(DatabaseTaskResponse::NotFound);
                     }
                 },
-                Err(_) => {
-                    debug!("Database command signal timeout, will check if update is due");
+                DatabaseTaskCommand::ForceUpdate => {
+                    info!("Database force-update checking");
+                    defmt::todo!("Force update not implemented");
                 }
+            },
+            Err(_) => {
+                debug!("Database command signal timeout, will check if update is due");
             }
         }
     }
-
+}
 
 async fn db_lookup<T: NorFlash + ReadNorFlash>(
     db: &Database<DbFlash<T>, NoopRawMutex>,
@@ -237,7 +237,7 @@ async fn db_lookup<T: NorFlash + ReadNorFlash>(
     }
 }
 
-async fn db_count<T:NorFlash + ReadNorFlash> (db: &Database<DbFlash<T>,NoopRawMutex>) -> usize {
+async fn db_count<T: NorFlash + ReadNorFlash>(db: &Database<DbFlash<T>, NoopRawMutex>) -> usize {
     let rtx = db.read_transaction().await;
     let mut cursor = rtx.read_all().await.expect("Cursor fail");
     let mut count = 0usize;
@@ -252,7 +252,6 @@ async fn db_count<T:NorFlash + ReadNorFlash> (db: &Database<DbFlash<T>,NoopRawMu
     }
     count
 }
-
 
 async fn sync_database<T: NorFlash + ReadNorFlash>(
     db: &Database<DbFlash<T>, NoopRawMutex>,
@@ -331,7 +330,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 )
                 .await
                 {
-                    Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
+                    Ok(e) => e.map_err(|_| UpdateError::ConnectionError)?,
                     Err(_) => {
                         return Err(UpdateError::Timeout);
                     }
@@ -344,12 +343,12 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                 )
                 .await
                 {
-                    Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
+                    Ok(e) => e.map_err(|_| UpdateError::ConnectionError)?,
                     Err(_) => {
                         return Err(UpdateError::Timeout);
                     }
                 };
-               
+
                 if !StatusCode::is_successful(&response.status) {
                     return Err(UpdateError::RemoteServerError(response.status));
                 }
@@ -443,33 +442,28 @@ async fn get_remote_db_version(
     )
     .expect("Unable to build DB update URL");
     debug!("Obtaining remote database version from {}", url);
-    
+
     //Make connection
     let mut rx_buffer = [0; 2048];
     let mut request = match embassy_time::with_timeout(
         CONFIG.http_timeout,
         http_client.request(Method::GET, &url),
-        )
-        .await
-        {
-            Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
-            Err(_) => {
-                return Err(UpdateError::Timeout);
-            }
-    };
-    debug!("Connecting");
-    let response = match embassy_time::with_timeout(
-        CONFIG.http_timeout,
-        request.send(&mut rx_buffer),
     )
     .await
     {
-        Ok(e) => e.map_err(|_|UpdateError::ConnectionError)?,
+        Ok(e) => e.map_err(|_| UpdateError::ConnectionError)?,
         Err(_) => {
             return Err(UpdateError::Timeout);
         }
     };
-               
+    debug!("Connecting");
+    let response =
+        match embassy_time::with_timeout(CONFIG.http_timeout, request.send(&mut rx_buffer)).await {
+            Ok(e) => e.map_err(|_| UpdateError::ConnectionError)?,
+            Err(_) => {
+                return Err(UpdateError::Timeout);
+            }
+        };
 
     if !StatusCode::is_successful(&response.status) {
         return Err(UpdateError::RemoteServerError(response.status));
@@ -479,7 +473,10 @@ async fn get_remote_db_version(
     //Read 100 bytes
     let mut buf = [0x00u8; 100];
     let mut reader = response.body().reader();
-    let len = reader.read(&mut buf).await.map_err(|_|UpdateError::ConnectionError)?;
+    let len = reader
+        .read(&mut buf)
+        .await
+        .map_err(|_| UpdateError::ConnectionError)?;
 
     if len != 24 {
         error!("Wrong DBVersion length - should be 24 bytes, got {}", len);
