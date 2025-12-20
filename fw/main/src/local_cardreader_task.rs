@@ -1,4 +1,4 @@
-use embassy_time::{Duration, Timer};
+use embassy_time::{Delay, Duration, Timer};
 
 use defmt::*;
 
@@ -7,29 +7,34 @@ use embedded_hal::spi::SpiDevice;
 
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 
-use crate::main_task::{CardReaderEvent, CARDREADER_EVENT_SIGNAL};
+use crate::{Spi0Resources, main_task::{CARDREADER_EVENT_SIGNAL, CardReaderEvent}};
 
-pub struct LocalCardreaderTaskRunner<T: SpiDevice, U: OutputPin> {
-    device: T,
-    rst: U,
-}
+use embassy_rp::spi::{Config as SpiConfig, Spi};
 
-impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
-    pub fn new(device: T, rst: U) -> Self {
-        Self { device, rst }
-    }
+use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 
-    pub async fn run(&mut self) -> ! {
+use embassy_rp::gpio::{Output, Level};
+
+#[embassy_executor::task]
+pub async fn local_cardreader_task(spi: Spi0Resources) -> ! {
+         
+        let spi0 = Spi::new_blocking(spi.spi, spi.sck, spi.mosi, spi.miso, SpiConfig::default());
+        let mut spi0: ExclusiveDevice<
+            Spi<'_, embassy_rp::peripherals::SPI0, embassy_rp::spi::Blocking>,
+            Output,
+            Delay,
+        > = ExclusiveDevice::new(spi0, Output::new(spi.cs, Level::High), Delay);
+        let mut rst = Output::new(spi.rst, Level::High);
+
         loop {
             //Set up the MFRC522 SPI Interface
             debug!("Initialising MFRC522 SPI interface");
-            let interface: SpiInterface<&mut T, mfrc522::comm::blocking::spi::DummyDelay> =
-                SpiInterface::new(&mut self.device);
+            let interface =  SpiInterface::new(&mut spi0);
             //Reset, then try to initialise the MFRC522 readerS
             //Pull rst low for 250mS
-            let _ = self.rst.set_low();
+            let _ = rst.set_low();
             Timer::after(Duration::from_millis(250)).await;
-            let _ = self.rst.set_high();
+            let _ = rst.set_high();
 
             match Mfrc522::new(interface).init() {
                 Ok(mut mfrc) => {
@@ -74,4 +79,3 @@ impl<T: SpiDevice, U: OutputPin> LocalCardreaderTaskRunner<T, U> {
             }
         }
     }
-}

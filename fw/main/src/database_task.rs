@@ -5,15 +5,22 @@ use embassy_net::{
 };
 
 use embassy_rp::clocks::RoscRng;
+use embassy_rp::gpio::{Level, Output};
+use embassy_rp::spi::{Config as SpiConfig, Spi};
+
 use embassy_sync::blocking_mutex::raw::NoopRawMutex;
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Instant, Timer};
 
+
 use defmt::{Format, write, *};
 
 use ekv::flash::{self, PageID};
 use ekv::{config, Database};
+
+//For SPI flash
+use w25q32jv::W25q32jv;
 
 use embedded_io_async::Read;
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
@@ -27,6 +34,7 @@ use reqwless::request::Method;
 use reqwless::response::StatusCode;
 
 use crate::config::CONFIG;
+use crate::FlashResources;
 
 // Workaround for alignment requirements.
 #[repr(C, align(4))]
@@ -102,30 +110,29 @@ impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
     }
 }
 
-pub struct DatabaseRunner<T: NorFlash + ReadNorFlash> {
-    flash: T,
-    size: usize,
-    start_addr: usize,
-    stack: Stack<'static>,
-}
+#[embassy_executor::task]
+pub async fn database_task(r: FlashResources, size: usize, start_addr: usize, stack: Stack<'static>) {
 
-impl<T> DatabaseRunner<T>
-where
-    T: NorFlash + ReadNorFlash,
-{
-    pub fn new(flash: T, size: usize, start_addr: usize, stack: Stack<'static>) -> Self {
-        Self {
-            flash,
-            size,
-            start_addr,
-            stack,
-        }
-    }
 
-    pub async fn run(self) -> ! {
-        let flash: DbFlash<T> = DbFlash {
-            flash: self.flash,
-            start: self.start_addr,
+        //Initialise the SPI1 bus
+        let spi1: Spi<'_, embassy_rp::peripherals::SPI1, embassy_rp::spi::Blocking> =
+            Spi::new_blocking(r.spi, r.sck, r.mosi, r.miso, SpiConfig::default());
+
+        //Initialise the flash device
+        let flash_wp = Output::new(r.wp, Level::Low); //WP is ACTIVE LOW - start with flash WP set
+        let flash_hold = Output::new(r.hold, Level::High); //Flash hold is ACTIVE LOW - start with hold not enabled
+        let flash_cs = Output::new(r.cs, Level::High); //SPI flash CS pin
+        let spi_device = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi1, flash_cs);
+        let mut flash = W25q32jv::new(spi_device, flash_hold, flash_wp).expect("Unable to initialise flash");
+
+        info!(
+            "SPI flash (W25Q32) initialised - device id {}",
+            flash.device_id().expect("Unable to read flash ID")
+        );
+        //Wrap it into the DBFlash
+        let flash = DbFlash {
+            start: start_addr,
+            flash: flash,
         };
 
         //Initialise and mount the EKV database
@@ -167,7 +174,7 @@ where
 
         loop {
             //Sync 60 seconds after startup (to let wifi come up) and at specified intervals
-            if self.stack.is_config_up() && 
+            if stack.is_config_up() && 
                 (
                     (last_sync_attempt_time == Instant::MIN && Instant::now() > Instant::MIN + Duration::from_secs(60))
                     || Instant::now() > last_sync_attempt_time + CONFIG.db_sync_frequency
@@ -175,7 +182,7 @@ where
             {
                 last_sync_attempt_time = Instant::now();
                 
-                match sync_database(&db, self.stack).await {
+                match sync_database(&db, stack).await {
                     Ok(_) => {
                         info!("Database sync successful");
                     },
@@ -212,7 +219,7 @@ where
             }
         }
     }
-}
+
 
 async fn db_lookup<T: NorFlash + ReadNorFlash>(
     db: &Database<DbFlash<T>, NoopRawMutex>,

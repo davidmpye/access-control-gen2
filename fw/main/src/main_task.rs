@@ -1,4 +1,4 @@
-use embassy_rp::gpio::Output;
+use embassy_rp::gpio::{Output, Level};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::Timer;
@@ -13,6 +13,8 @@ use crate::{config::LatchMode, CONFIG};
 
 use crate::{LogEvent, LOG_EVENT_QUEUE};
 
+use crate::{LedResources, RelayResources};
+
 pub (crate) enum CardReaderEvent {
     CardMD5(md5::Digest),
 }
@@ -25,11 +27,7 @@ enum LatchState {
 }
 
 #[embassy_executor::task]
-pub async fn main_task(
-    mut relay_pin: Output<'static>,
-    mut allowed_led: Output<'static>,
-    mut denied_led: Output<'static>,
-) -> ! {
+pub async fn main_task(leds: LedResources, relay: RelayResources) -> ! {
     //The task needs ownership of Red LED, Green LED, MOSFET gate pin
     
     //Receives message of new RFID read via signal, passes to database task.
@@ -37,6 +35,10 @@ pub async fn main_task(
     //Activates appropriate LED +- FET
     //Sends message to the log task queue so it can update the backend
     let mut latch_state = LatchState::Disabled;
+
+    let mut allowed_led = Output::new(leds.green_led, Level::Low);
+    let mut denied_led = Output::new(leds.red_led, Level::Low);
+    let mut relay_pin = Output::new(relay.relay_pin, Level::Low);
 
     loop {
         //Await a message from the card reader handler
