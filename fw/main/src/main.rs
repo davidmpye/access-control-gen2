@@ -43,13 +43,15 @@ mod config;
 use config::CONFIG;
 
 assign_resources! {
-    leds: LedResources {
+    //Status LEDs
+    status_leds: StatusLedResources {
         red_led: PIN_7,
         green_led: PIN_8,
     },
     relay: RelayResources {
         relay_pin: PIN_15,
     }
+    //SPI1 bus + WP/Hold pins for comms with the flash IC
     flash: FlashResources {
         spi: SPI1,
         sck: PIN_10,
@@ -59,6 +61,7 @@ assign_resources! {
         wp: PIN_14,
         hold: PIN_9,
     },
+    //UART is used for RS485 link to anoter cardreader unit (if feature selected)
     uart: UartResources {
         tx: PIN_0,
         rx: PIN_1,
@@ -87,7 +90,6 @@ assign_resources! {
         pin_29: PIN_29,
     }
 }
-
 
 bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => InterruptHandler<PIO0>;
@@ -166,7 +168,7 @@ async fn main(spawner: Spawner) {
     }
 
     //Spawn the main task
-    spawner.must_spawn(main_task(resources.leds, resources.relay));
+    spawner.must_spawn(main_task(resources.status_leds, resources.relay));
 
     //Spawn the database task (2mbit flash, start addr 0)
     spawner.must_spawn(database_task(resources.flash, 0x00, stack));

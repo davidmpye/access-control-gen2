@@ -13,7 +13,7 @@ use crate::{config::LatchMode, CONFIG};
 
 use crate::{LogEvent, LOG_EVENT_QUEUE};
 
-use crate::{LedResources, RelayResources};
+use crate::{StatusLedResources, RelayResources};
 
 pub (crate) enum CardReaderEvent {
     CardMD5(md5::Digest),
@@ -27,7 +27,7 @@ enum LatchState {
 }
 
 #[embassy_executor::task]
-pub async fn main_task(leds: LedResources, relay: RelayResources) -> ! {    
+pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {    
     //Receives message of new RFID read via signal, passes to database task.
     //Receives message from database task - card allowed, card denied
     //Activates appropriate LED +- FET
