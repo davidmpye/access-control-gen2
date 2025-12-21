@@ -1,5 +1,6 @@
 use embassy_time::Duration;
 
+#[allow(dead_code)]
 pub(crate) enum LatchMode {
     Latching, //Device/controller will remain enabled until another card is scanned to disable it
     Timed(Duration), //Device controller will remain enabled for <time> then disable again
