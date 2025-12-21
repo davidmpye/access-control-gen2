@@ -38,7 +38,7 @@ use main_task::main_task;
 use remote_cardreader_task::remote_cardreader_task;
 use watchdog::watchdog_task;
 
-use log_task::{LogEvent, LogTaskRunner, LOG_EVENT_QUEUE};
+use log_task::{log_task, LogEvent, LOG_EVENT_QUEUE};
 mod config;
 use config::CONFIG;
 
@@ -105,11 +105,6 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
     runner.run().await
 }
 
-#[embassy_executor::task]
-async fn log_task(runner: LogTaskRunner) -> ! {
-    runner.run().await
-}
-
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
@@ -159,7 +154,7 @@ async fn main(spawner: Spawner) {
     //Spawn network task
     unwrap!(spawner.spawn(net_task(runner)));
 
-    //Set up the appropriate task to read from the card reader - either local (direct SPI) or remote (via RS485 link)
+    //Spawn the appropriate runner task for local (direct SPI) or remote (via RS485 link) cardreader
     if cfg!(not(feature = "remote-cardreader")) {
         info!("Local cardreader mode selected");
         info!("NB - if no cardreader, this will hang and reboot repeatedly (by watchdog)");
@@ -177,7 +172,7 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(database_task(resources.flash, 0x00, stack));
 
     //Spawn the logger task
-    spawner.must_spawn(log_task(LogTaskRunner::new(stack)));
+    spawner.must_spawn(log_task(stack));
 
     loop {
         match control
