@@ -4,14 +4,12 @@ use embassy_futures::select::{select, Either};
 use embassy_rp::bind_interrupts;
 use embassy_rp::peripherals::UART0;
 use embassy_rp::uart::{
-    Async, Config as UartConfig, InterruptHandler as UartInterruptHandler, Uart, UartRx, UartTx,
-};
+    Async, Config as UartConfig, InterruptHandler as UartInterruptHandler, Uart, UartRx};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 
 use heapless::Vec;
 use postcard::{from_bytes_cobs, to_vec_cobs};
-use serde::{Deserialize, Serialize};
 
 use crate::main_task::{CardReaderEvent, CARDREADER_EVENT_SIGNAL};
 use crate::UartResources;
@@ -103,7 +101,7 @@ async fn read_message<'d>(
     let mut buf = [0x00u8; 16];
 
     for index in 0..buf.len() {
-        if let Ok(_) = uart.read(&mut buf[index..index + 1]).await {
+        if uart.read(&mut buf[index..index + 1]).await.is_ok() {
             if buf[index] == 0x00u8 {
                 //Message complete, cobs ensures 0x00 will never be part of message, just end marker
                 //Decode message using from_bytes_cobs from Postcard
@@ -122,5 +120,5 @@ async fn read_message<'d>(
     }
     //If we are here, we have hit the end of the buffer
     error!("Rx buffer overflow");
-    return Err(RemoteError::RxBufferOverflow);
+    Err(RemoteError::RxBufferOverflow)
 }

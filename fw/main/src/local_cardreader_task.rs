@@ -11,7 +11,7 @@ use crate::{
 
 use embassy_rp::spi::{Config as SpiConfig, Spi};
 
-use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
+use embedded_hal_bus::spi::ExclusiveDevice;
 
 use embassy_rp::gpio::{Level, Output};
 

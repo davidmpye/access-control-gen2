@@ -9,7 +9,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Timer, WithTimeout};
 
 use defmt::*;
-use defmt::{write, Format, Formatter};
+use defmt::Format;
 
 use rand::RngCore;
 
@@ -22,10 +22,10 @@ use crate::CONFIG;
 const MAX_QUEUE_LEN: usize = 32usize;
 
 pub(crate) enum LogEvent {
-    ACTIVATED([u8; 32]),
-    DEACTIVATED([u8; 32]),
-    LOGINFAIL([u8; 32]),
-    ERROR,
+    Activated([u8; 32]),
+    Deactivated([u8; 32]),
+    LoginFail([u8; 32]),
+    Error,
 }
 
 //The queue can hold 32 events awaiting logging
@@ -72,13 +72,13 @@ impl LogTaskRunner {
 
     async fn log_event(&self, event: &LogEvent) -> Result<(), LogError> {
         //Abandon if wifi not running
-        while !self.stack.is_config_up() {
+        if !self.stack.is_config_up() {
             return Err(LogError::WifiNotConnected);
         }
 
         //Convert hash to ascii string representation
         let hash = match event {
-            LogEvent::ACTIVATED(hash) | LogEvent::DEACTIVATED(hash) | LogEvent::LOGINFAIL(hash) => {
+            LogEvent::Activated(hash) | LogEvent::Deactivated(hash) | LogEvent::LoginFail(hash) => {
                 //Convert hash to an ascii str representation
                 hash
             }
@@ -88,10 +88,10 @@ impl LogTaskRunner {
 
         //Get printable name for event, as expected by the Makerspace logging API
         let event_str = match event {
-            LogEvent::ACTIVATED(_) => "Activated",
-            LogEvent::DEACTIVATED(_) => "Deactivated",
-            LogEvent::LOGINFAIL(_) => "LoginFail",
-            LogEvent::ERROR => "ERROR",
+            LogEvent::Activated(_) => "Activated",
+            LogEvent::Deactivated(_) => "Deactivated",
+            LogEvent::LoginFail(_) => "LoginFail",
+            LogEvent::Error => "ERROR",
         };
 
         //Build a fresh http client for each database update attempt

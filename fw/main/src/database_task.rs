@@ -13,7 +13,7 @@ use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Instant, Timer};
 
-use defmt::{write, Format, *};
+use defmt::{Format, *};
 
 use ekv::flash::{self, PageID};
 use ekv::{config, Database};
@@ -228,7 +228,7 @@ async fn db_lookup<T: NorFlash + ReadNorFlash>(
     let rtx = db.read_transaction().await;
     let mut buf = [0u8; 32];
 
-    if let Some(_key) = rtx.read(&hash, &mut buf).await.map(|n| &buf[..n]).ok() {
+    if let Ok(_key) = rtx.read(&hash, &mut buf).await.map(|n| &buf[..n]) {
         debug!("Key {:?} found in database", hash);
         Some(())
     } else {
@@ -289,8 +289,8 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
         .read(b"__DB_VERSION__", &mut buf)
         .await
         .map(|n| &buf[..n])
-        .ok()
         .expect("Fatal error - unable to read database version");
+    
     info!("Current database version: {:a}", current_db_version);
     //Must drop rtx, otherwise attempting to set up a wtx will block
     drop(rtx);
@@ -424,7 +424,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
             Ok(())
         }
         Err(e) => {
-            return Err(e);
+            Err(e)
         }
     }
 }
@@ -485,5 +485,5 @@ async fn get_remote_db_version(
 
     let mut res = [0x00u8; 24];
     res.copy_from_slice(&rx_buffer[0..24]);
-    return Ok(res);
+    Ok(res)
 }

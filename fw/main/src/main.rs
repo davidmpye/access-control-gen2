@@ -17,7 +17,7 @@ use embassy_rp::bind_interrupts;
 use embassy_rp::clocks::RoscRng;
 use embassy_rp::gpio::{Level, Output};
 use embassy_rp::peripherals;
-use embassy_rp::peripherals::{DMA_CH0, PIO0, UART0};
+use embassy_rp::peripherals::{DMA_CH0, PIO0};
 use embassy_rp::pio::{InterruptHandler, Pio};
 use embassy_time::Timer;
 
