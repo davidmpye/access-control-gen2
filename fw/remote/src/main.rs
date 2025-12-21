@@ -79,7 +79,7 @@ async fn read_message<'d>(uart: &mut UartRx<'d, UART0, Async>) -> Result<MainMes
     let mut buf = [0x00u8; 16];
 
     for index in 0..buf.len() {
-        if let Ok(_) = uart.read(&mut buf[index..index + 1]).await {
+        if uart.read(&mut buf[index..index + 1]).await.is_ok() {
             if buf[index] == 0x00u8 {
                 //Message complete, cobs ensures 0x00 will never be part of message, just end marker
                 //Decode message using from_bytes_cobs from Postcard
@@ -97,7 +97,7 @@ async fn read_message<'d>(uart: &mut UartRx<'d, UART0, Async>) -> Result<MainMes
     }
     //If we are here, we have hit the end of the buffer
     error!("Rx buffer overflow");
-    return Err(RemoteError::RxBufferOverflow);
+    Err(RemoteError::RxBufferOverflow)
 }
 
 
