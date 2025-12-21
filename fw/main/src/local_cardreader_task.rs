@@ -31,9 +31,9 @@ pub async fn local_cardreader_task(spi: Spi0Resources) -> ! {
         let interface = SpiInterface::new(&mut spi0);
         //Reset, then try to initialise the MFRC522 readerS
         //Pull rst low for 250mS
-        let _ = rst.set_low();
+        rst.set_low();
         Timer::after(Duration::from_millis(250)).await;
-        let _ = rst.set_high();
+        rst.set_high();
 
         match Mfrc522::new(interface).init() {
             Ok(mut mfrc) => {

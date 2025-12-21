@@ -21,6 +21,8 @@ use crate::CONFIG;
 
 const MAX_QUEUE_LEN: usize = 32usize;
 
+
+#[allow(dead_code)]
 pub(crate) enum LogEvent {
     Activated([u8; 32]),
     Deactivated([u8; 32]),
@@ -133,7 +135,7 @@ impl LogTaskRunner {
         debug!("Json string: {}", json);
         let mut rx_buf = [0x00; 512];
 
-        let request = match http_client.request(Method::POST, &url).with_timeout(CONFIG.http_timeout)
+        let request = match http_client.request(Method::POST, url).with_timeout(CONFIG.http_timeout)
         .await
         {
             Ok(e) => e.map_err(|_|LogError::ConnectionError)?,

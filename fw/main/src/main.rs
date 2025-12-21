@@ -174,7 +174,7 @@ async fn main(spawner: Spawner) {
     spawner.must_spawn(main_task(resources.leds, resources.relay));
 
     //Spawn the database task (2mbit flash, start addr 0)
-    spawner.must_spawn(database_task(resources.flash, 2 * 1024 * 1024, 0x00, stack));
+    spawner.must_spawn(database_task(resources.flash, 0x00, stack));
 
     //Spawn the logger task
     spawner.must_spawn(log_task(LogTaskRunner::new(stack)));

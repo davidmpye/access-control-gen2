@@ -54,15 +54,15 @@ pub(crate) enum UpdateError {
 }
 pub(crate) enum DatabaseTaskCommand {
     CheckMD5Hash([u8; 32]),
-    ForceUpdate,
+    // ForceUpdate,
 }
 
 pub(crate) enum DatabaseTaskResponse {
     Found,
     NotFound,
-    Invalid,
-    Error,
-    UpdateOk,
+   // Invalid,
+   // Error,
+   // UpdateOk,
 }
 
 pub(crate) static DATABASE_COMMAND_SIGNAL: Signal<ThreadModeRawMutex, DatabaseTaskCommand> =
@@ -113,7 +113,6 @@ impl<T: NorFlash + ReadNorFlash> flash::Flash for DbFlash<T> {
 #[embassy_executor::task]
 pub async fn database_task(
     r: FlashResources,
-    size: usize,
     start_addr: usize,
     stack: Stack<'static>,
 ) {
@@ -136,7 +135,7 @@ pub async fn database_task(
     //Wrap it into the DBFlash
     let flash = DbFlash {
         start: start_addr,
-        flash: flash,
+        flash,
     };
 
     //Initialise and mount the EKV database
@@ -209,10 +208,6 @@ pub async fn database_task(
                         DATABASE_RESPONSE_SIGNAL.signal(DatabaseTaskResponse::NotFound);
                     }
                 },
-                DatabaseTaskCommand::ForceUpdate => {
-                    info!("Database force-update checking");
-                    defmt::todo!("Force update not implemented");
-                }
             },
             Err(_) => {
                 debug!("Database command signal timeout, will check if update is due");
@@ -290,7 +285,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
         .await
         .map(|n| &buf[..n])
         .expect("Fatal error - unable to read database version");
-    
+
     info!("Current database version: {:a}", current_db_version);
     //Must drop rtx, otherwise attempting to set up a wtx will block
     drop(rtx);
@@ -326,7 +321,7 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
 
                 let mut request = match embassy_time::with_timeout(
                     CONFIG.http_timeout,
-                    http_client.request(Method::GET, &url),
+                    http_client.request(Method::GET, url),
                 )
                 .await
                 {
@@ -371,8 +366,8 @@ async fn sync_database<T: NorFlash + ReadNorFlash>(
                     debug!("Read {} bytes", len);
                     let mut store: Vec<[u8; 32], 32> = Vec::new();
 
-                    let mut hashes = buf[..len + buf_offset].chunks_exact(33);
-                    while let Some(hash) = hashes.next() {
+                    let hashes = buf[..len + buf_offset].chunks_exact(33);
+                    for hash in hashes {
                         //Convert hash into correct length type
                         let hash: [u8; 32] = hash[0..32].try_into().unwrap();
                         debug!(
@@ -447,7 +442,7 @@ async fn get_remote_db_version(
     let mut rx_buffer = [0; 2048];
     let mut request = match embassy_time::with_timeout(
         CONFIG.http_timeout,
-        http_client.request(Method::GET, &url),
+        http_client.request(Method::GET, url),
     )
     .await
     {

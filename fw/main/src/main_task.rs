@@ -58,10 +58,7 @@ pub async fn main_task(leds: LedResources, relay: RelayResources) -> ! {
                 //Check if card valid - we use the hash_buf to avoid lifetime issues
                 DATABASE_COMMAND_SIGNAL.signal(DatabaseTaskCommand::CheckMD5Hash(hash_buf));
                 info!("Awaiting database task reply");
-                let card_valid = match DATABASE_RESPONSE_SIGNAL.wait().await {
-                    DatabaseTaskResponse::Found => true,
-                    _ => false,
-                };
+                let card_valid = matches!(DATABASE_RESPONSE_SIGNAL.wait().await, DatabaseTaskResponse::Found);
                 
                 match CONFIG.latch_mode {
                     LatchMode::Latching => {
