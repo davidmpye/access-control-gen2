@@ -8,21 +8,20 @@ use {defmt_rtt as _, panic_probe as _};
 
 use embassy_executor::Spawner;
 use embassy_rp::{
+    bind_interrupts,
     gpio,
     gpio::{Input, Level, Output},
     peripherals,
+    peripherals::UART0,
+
     spi::{Config as SpiConfig, Spi},
+    uart::{Async, Config as UartConfig, InterruptHandler, Uart, UartRx},
+    watchdog::Watchdog,
 };
 use embassy_time::{Delay, Duration, Timer};
-use embedded_hal_bus::spi::ExclusiveDevice;
-
-use embassy_rp::peripherals::UART0;
-use embassy_rp::uart::{Async, Config as UartConfig, InterruptHandler, Uart, UartRx};
-use embassy_rp::watchdog::Watchdog;
-
-use embassy_rp::bind_interrupts;
 
 use assign_resources::assign_resources;
+use embedded_hal_bus::spi::ExclusiveDevice;
 use heapless::Vec;
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 use postcard::{from_bytes_cobs, to_vec_cobs};
