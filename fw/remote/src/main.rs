@@ -10,22 +10,52 @@ use embassy_executor::Spawner;
 use embassy_rp::{
     gpio,
     gpio::{Input, Level, Output},
+    peripherals,
     spi::{Config as SpiConfig, Spi},
 };
 use embassy_time::{Delay, Duration, Timer};
 use embedded_hal_bus::spi::ExclusiveDevice;
 
-use embassy_rp::peripherals::{UART0, WATCHDOG};
+use embassy_rp::peripherals::UART0;
 use embassy_rp::uart::{Async, Config as UartConfig, InterruptHandler, Uart, UartRx};
 use embassy_rp::watchdog::Watchdog;
 
 use embassy_rp::bind_interrupts;
 
+use assign_resources::assign_resources;
 use heapless::Vec;
 use mfrc522::{comm::blocking::spi::SpiInterface, Mfrc522, Uid};
 use postcard::{from_bytes_cobs, to_vec_cobs};
 
 use uart_protocol::{MainMessage, MainMessage::*, RemoteMessage};
+
+assign_resources!{
+    //Status LEDs
+    status_leds: StatusLedResources {
+        red_led: PIN_2,
+        green_led: PIN_3,
+    },
+    uart: UartResources {
+        tx: PIN_0,
+        rx: PIN_1,
+        uart: UART0,
+        tx_dma: DMA_CH2,
+        rx_dma: DMA_CH3,
+    },
+    watchdog: WatchdogResources {
+        dog: WATCHDOG,
+        heartbeat_led: PIN_6,
+    },
+    spi0: Spi0Resources {
+        spi: SPI0,
+        sck: PIN_18,
+        mosi: PIN_19,
+        miso: PIN_16,
+        cs: PIN_17,
+        rst: PIN_21,
+    },
+}
+
 
 #[derive(Debug, Format)]
 pub enum RemoteError {
@@ -42,8 +72,9 @@ const WATCHDOG_TIMER_SECS: u64 = 2;
 const WATCHDOG_FEED_TIMER_MS: u64 = 250;
 
 #[embassy_executor::task]
-pub async fn watchdog_task(watchdog: WATCHDOG, mut led: Output<'static>) -> ! {
-    let mut dog = Watchdog::new(watchdog);
+pub async fn watchdog_task(r: WatchdogResources) -> ! {
+    let mut dog = Watchdog::new(r.dog);
+    let mut led = Output::new(r.heartbeat_led, Level::Low);
     dog.start(Duration::from_secs(WATCHDOG_TIMER_SECS));
     loop {
         dog.feed();
@@ -54,10 +85,19 @@ pub async fn watchdog_task(watchdog: WATCHDOG, mut led: Output<'static>) -> ! {
 
 #[embassy_executor::task]
 async fn led_task(
-    mut uart_rx: UartRx<'static, UART0, Async>,
-    mut red_led: Output<'static>,
-    mut green_led: Output<'static>,
+    mut uart_rx: UartRx<'static, UART0, Async>, leds: StatusLedResources
 ) -> ! {
+
+    let mut green_led = Output::new(leds.green_led, Level::Low);
+    let mut red_led = Output::new(leds.red_led, Level::Low);
+
+    //Briefly flash the LEDs
+    green_led.toggle();
+    red_led.toggle();
+    Timer::after_millis(500).await;
+    green_led.toggle();
+    red_led.toggle();
+
     //This function 'owns' the two IOs as red/green LEDs.
     loop {
         match read_message(&mut uart_rx).await {
@@ -109,37 +149,27 @@ async fn read_message<'d>(uart: &mut UartRx<'d, UART0, Async>) -> Result<MainMes
 async fn main(spawner: Spawner) -> ! {
     // Initialise Peripherals
     let p = embassy_rp::init(Default::default());
+    let resources =split_resources!(p);
 
     //Spawn the watchdog task first
-    let heartbeat_led = Output::new(p.PIN_7, Level::Low);
-    spawner.must_spawn(watchdog_task(p.WATCHDOG, heartbeat_led));
-
-    //Set up pins
-    let mut card_read_led = Output::new(p.PIN_6, Level::Low);
+    spawner.must_spawn(watchdog_task(resources.watchdog));
 
     //Set up the UART we use to speak over RS485 to the controller
-    let (tx_pin, rx_pin, uart) = (p.PIN_0, p.PIN_1, p.UART0);
     let uart = Uart::new(
-        uart,
-        tx_pin,
-        rx_pin,
+        resources.uart.uart,
+        resources.uart.tx,
+        resources.uart.rx,
         Irqs,
-        p.DMA_CH0,
-        p.DMA_CH1,
+        resources.uart.tx_dma,
+        resources.uart.rx_dma,
         UartConfig::default(),
     );
 
+    //Split the UART
     let (mut uart_tx, uart_rx) = uart.split();
 
-    //Leds on, 1 sec flash at power up
-    let mut green_led = Output::new(p.PIN_3, Level::Low);
-    let mut red_led = Output::new(p.PIN_2, Level::Low);
-    Timer::after_millis(500).await;
-    green_led.set_high();
-    Timer::after_millis(500).await;
-    red_led.set_high();
     //Spawn the status LED task, which owns the two GPIO ACC pins and the Rx half of the UART
-    spawner.must_spawn(led_task(uart_rx, red_led, green_led));
+    spawner.must_spawn(led_task(uart_rx, resources.status_leds));
 
     //This could be better - the newer embassy-rp watchdog is able to tell us if the reset is watchdog-origi
     debug!("Sending JustReset to controller");
@@ -148,15 +178,18 @@ async fn main(spawner: Spawner) -> ! {
 
     //Init SPI0 for talking to the card reader
     debug!("Init SPI0 peripheral");
-    let (sck, mosi, miso, cs) = (p.PIN_18, p.PIN_19, p.PIN_16, p.PIN_17);
-    let cs = Output::new(cs, Level::High); //CS into output
 
-    let spi0 = Spi::new_blocking(p.SPI0, sck, mosi, miso, SpiConfig::default());
-    let mut spi0 = ExclusiveDevice::new(spi0, cs, Delay);
+    let spi = resources.spi0;
+    let spi0 = Spi::new_blocking(spi.spi, spi.sck, spi.mosi, spi.miso, SpiConfig::default());
+    let mut spi0: ExclusiveDevice<
+        Spi<'_, embassy_rp::peripherals::SPI0, embassy_rp::spi::Blocking>,
+        Output,
+        Delay,
+    > = ExclusiveDevice::new(spi0, Output::new(spi.cs, Level::High), Delay);
+    let mut rst = Output::new(spi.rst, Level::High);
 
     //Nice idea to use MFRC IRQ pin but not supported by driver library presently
     let _irq = Input::new(p.PIN_20, gpio::Pull::Up);
-    let mut rst = Output::new(p.PIN_21, Level::High);
 
     let mut last_sent_ok_message_counter = 0x00u8;
 
@@ -191,7 +224,6 @@ async fn main(spawner: Spawner) -> ! {
                             }
                             Ok(ref _uid @ Uid::Triple(ref inner)) => {
                                 debug!("Triple UID card read");
-
                                 let mut buf = [0x00; 10];
                                 buf.copy_from_slice(&inner.as_bytes()[..10]);
                                 RemoteMessage::TripleUid(buf)
@@ -204,11 +236,6 @@ async fn main(spawner: Spawner) -> ! {
                         let vec: Vec<u8, 16> = to_vec_cobs(&message).unwrap();
                         let _ = uart_tx.write(&vec).await;
                         debug!("Card UID message sent");
-                        //Flash the "card read" LED to indicate success here.
-                        card_read_led.set_high();
-                        Timer::after_millis(100).await;
-                        card_read_led.set_low();
-                        Timer::after_millis(100).await;
                         Timer::after(DELAY_BETWEEN_READS).await;
                     } else {
                         //WUPA failed, no card found. Wait 100mS in between read attempts
