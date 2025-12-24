@@ -3,12 +3,9 @@ $fn=50;
 base_thickness = 7.5;
 pillar_height = 35;
 
-<<<<<<< HEAD
-=======
 pillar_dia = 10;
 piller_inner_hole_dia = 4;
 
->>>>>>> 92d44d147dc9a56990f914753cdcebaa5854797c
 module bracket1 () {
 
     pillar_1_loc = [ 65.65/2, 117.05/2,0];
@@ -20,15 +17,6 @@ module bracket1 () {
         union() {
             //Add on the pillars
             translate([25,117.05/2,0]) difference() {
-<<<<<<< HEAD
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
-            }
-            
-            translate([-25,117.05/2,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
-=======
                 cylinder(h=pillar_height,d=pillar_dia);
                 translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
@@ -36,7 +24,6 @@ module bracket1 () {
             translate([-25,117.05/2,0]) difference() {
                 cylinder(h=pillar_height,d=pillar_dia);
                 translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
->>>>>>> 92d44d147dc9a56990f914753cdcebaa5854797c
             }
             
             hull() {
@@ -45,15 +32,13 @@ module bracket1 () {
                 translate(pillar_3_loc) cylinder(d=10,h=base_thickness);
                 translate(pillar_4_loc) cylinder(d=10,h=base_thickness);
             };
-<<<<<<< HEAD
+            
             //Screw mounts
             translate([0,0,-0.01]) translate(pillar_1_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_2_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_3_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_4_loc) cylinder(d=7, h=9.5);
             
-=======
->>>>>>> 92d44d147dc9a56990f914753cdcebaa5854797c
         }
         //Drill out the four mounting post holes
         translate([0,0,-0.01]) translate(pillar_1_loc) cylinder(d=7, h=5);
@@ -81,20 +66,6 @@ module bracket2() {
         union() {
             //Add on the pillars
             translate([25,117.05/2 - 105,0]) difference() {
-<<<<<<< HEAD
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
-            }
-            
-            translate([-25,117.05/2 - 105,0]) difference() {
-                cylinder(h=pillar_height,d=10);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=4);
-            }
-            
-            hull() {
-                
-                //point to merge the bracket in
-=======
                 cylinder(h=pillar_height,d=pillar_dia);
                 translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
             }
@@ -106,7 +77,6 @@ module bracket2() {
             
             hull() {
                 //point to merge the and pillars together
->>>>>>> 92d44d147dc9a56990f914753cdcebaa5854797c
                 translate([0,15,0]) translate(pillar_5_loc) cylinder(d=8,h=base_thickness);
                 translate([0,15,0]) translate(pillar_6_loc) cylinder(d=8,h=base_thickness);
 
@@ -116,15 +86,13 @@ module bracket2() {
                 translate(pillar_7_loc) cylinder(d=10,h=base_thickness);
                 translate(pillar_8_loc) cylinder(d=10,h=base_thickness);
             };
-<<<<<<< HEAD
             
             //Screw mounts
             translate([0,0,-0.01]) translate(pillar_5_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_6_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_7_loc) cylinder(d=7, h=9.5);
             translate([0,0,-0.01]) translate(pillar_8_loc) cylinder(d=7, h=9.5);
-=======
->>>>>>> 92d44d147dc9a56990f914753cdcebaa5854797c
+            
         }
         //Drill out the four mounting post holes
         translate([0,0,-0.01]) translate(pillar_5_loc) cylinder(d=7, h=5);
