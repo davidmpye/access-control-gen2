@@ -33,8 +33,13 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
     //Activates appropriate LED +- FET
     //Sends message to the log task queue so it can update the backend
 
-    let mut allowed_led = Output::new(leds.green_led, Level::Low);
-    let mut denied_led = Output::new(leds.red_led, Level::Low);
+    //Briefly flash the allowed and denied LEDs at startup of task
+    let mut allowed_led = Output::new(leds.green_led, Level::High);
+    let mut denied_led = Output::new(leds.red_led, Level::High);
+    Timer::after_millis(500).await;
+    allowed_led.set_low();
+    denied_led.set_low();
+
     let mut relay_pin = Output::new(relay.relay_pin, Level::Low);
 
     let mut latch_state = LatchState::Disabled;
