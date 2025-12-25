@@ -87,8 +87,8 @@ async fn led_task(
     mut uart_rx: UartRx<'static, UART0, Async>, leds: StatusLedResources
 ) -> ! {
 
-    let mut green_led = Output::new(leds.green_led, Level::Low);
-    let mut red_led = Output::new(leds.red_led, Level::Low);
+    let mut green_led = Output::new(leds.green_led, Level::High);
+    let mut red_led = Output::new(leds.red_led, Level::High);
 
     //Briefly flash the LEDs
     green_led.toggle();
@@ -97,7 +97,7 @@ async fn led_task(
     green_led.toggle();
     red_led.toggle();
 
-    //This function 'owns' the two IOs as red/green LEDs.
+    //This function 'owns' the two IOs as externally mounted red/green LEDs (LEDs connected between 3v3 and the GPIO, so low->on)
     loop {
         match read_message(&mut uart_rx).await {
             Ok(message) => match message {
