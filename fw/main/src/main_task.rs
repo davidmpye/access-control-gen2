@@ -36,9 +36,18 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
     //Briefly flash the allowed and denied LEDs at startup of task
     let mut allowed_led = Output::new(leds.green_led, Level::High);
     let mut denied_led = Output::new(leds.red_led, Level::High);
+    //Additional GPIO leds - low = on.
+    let mut allowed_led_additional = Output::new(leds.green_led_additional_gpio, Level::Low);
+    let mut denied_led_additional = Output::new(leds.red_led_additional_gpio, Level::Low);
     Timer::after_millis(500).await;
     allowed_led.set_low();
     denied_led.set_low();
+
+    allowed_led_additional.set_high();
+    denied_led_additional.set_high();
+
+
+
 
     let mut relay_pin = Output::new(relay.relay_pin, Level::Low);
 
@@ -73,6 +82,7 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
                                     info!("Card valid, access granted");
                                     relay_pin.set_high();
                                     allowed_led.set_high();
+                                    allowed_led_additional.set_low();
                                     latch_state = LatchState::Enabled(hash_buf);
                                     queue_log_message(LogEvent::Activated(hash_buf));
                                     //If we have a remote cardreader, it will set LED to green
@@ -81,10 +91,12 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
                                 } else {
                                     info!("Card invalid, access denied");
                                     denied_led.set_high();
+                                    denied_led_additional.set_low();
                                     //Remote cardreader LED to red
                                     MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessDenied);
                                     Timer::after_secs(2).await;
                                     denied_led.set_low();
+                                    denied_led_additional.set_high();
                                     queue_log_message(LogEvent::LoginFail(hash_buf));
                                     //Turn off remote cardreader LED (if present)
                                     MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
@@ -95,6 +107,7 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
                                 info!("Signed out, device deactivated");
                                 relay_pin.set_low();
                                 allowed_led.set_low();
+                                allowed_led_additional.set_high();
                                 latch_state = LatchState::Disabled;
                                 queue_log_message(LogEvent::Deactivated(hash));
                             }
@@ -105,19 +118,23 @@ pub async fn main_task(leds: StatusLedResources, relay: RelayResources) -> ! {
                             info!("Card valid, latching for {} seconds", time.as_secs());
                             relay_pin.set_high();
                             allowed_led.set_high();
+                            allowed_led_additional.set_low();
                             MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessGranted);
                             Timer::after(time).await;
                             relay_pin.set_low();
                             allowed_led.set_low();
+                            allowed_led_additional.set_high();
                             MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
                             debug!("Deactivated");
                             queue_log_message(LogEvent::Activated(hash_buf));
                         } else {
                             info!("Card invalid, access denied");
                             denied_led.set_high();
+                            denied_led_additional.set_low();
                             MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AccessDenied);
                             Timer::after_secs(2).await;
                             denied_led.set_low();
+                            denied_led_additional.set_high();
                             MAIN_MESSAGE_SIGNAL.signal(uart_protocol::MainMessage::AwaitingCard);
                             queue_log_message(LogEvent::LoginFail(hash_buf));
                         }

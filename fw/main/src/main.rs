@@ -47,6 +47,10 @@ assign_resources! {
     status_leds: StatusLedResources {
         red_led: PIN_7,
         green_led: PIN_8,
+
+        //Allows use of external offboard LED if desired - low to activate
+        red_led_additional_gpio: PIN_2,
+        green_led_additional_gpio: PIN_3,
     },
     relay: RelayResources {
         relay_pin: PIN_15,
