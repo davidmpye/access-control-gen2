@@ -4,7 +4,7 @@ base_thickness = 7.5;
 pillar_height = 35;
 
 pillar_dia = 10;
-piller_inner_hole_dia = 4;
+pillar_inner_hole_dia = 4;
 
 module bracket1 () {
 
@@ -18,12 +18,12 @@ module bracket1 () {
             //Add on the pillars
             translate([25,117.05/2,0]) difference() {
                 cylinder(h=pillar_height,d=pillar_dia);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
+               translate([0,0,pillar_height-7]) cylinder(h=7.1, d1=pillar_inner_hole_dia, d2=pillar_inner_hole_dia+1);
             }
             
             translate([-25,117.05/2,0]) difference() {
                 cylinder(h=pillar_height,d=pillar_dia);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
+            translate([0,0,pillar_height-7]) cylinder(h=7.1, d1=pillar_inner_hole_dia, d2=pillar_inner_hole_dia+1);
             }
             
             hull() {
@@ -67,13 +67,11 @@ module bracket2() {
             //Add on the pillars
             translate([25,117.05/2 - 105,0]) difference() {
                 cylinder(h=pillar_height,d=pillar_dia);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
-            }
+            translate([0,0,pillar_height-7]) cylinder(h=7.1, d1=pillar_inner_hole_dia, d2=pillar_inner_hole_dia+1);            }
             
             translate([-25,117.05/2 - 105,0]) difference() {
                 cylinder(h=pillar_height,d=pillar_dia);
-                translate([0,0,pillar_height-5])cylinder(h=10,d=piller_inner_hole_dia);
-            }
+            translate([0,0,pillar_height-7]) cylinder(h=7.1, d1=pillar_inner_hole_dia, d2=pillar_inner_hole_dia+1);            }
             
             hull() {
                 //point to merge the and pillars together
@@ -110,4 +108,4 @@ module bracket2() {
 
 
 bracket1();
-bracket2();
+//bracket2();
